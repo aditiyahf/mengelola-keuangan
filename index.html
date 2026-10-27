@@ -14,6 +14,47 @@
     <span class="privacy">Versi awal · data tersimpan di browser ini</span>
   </header>
   <main class="container">
+    <section class="panel" id="authSection">
+  <h2>Masuk ke Ruang Dana</h2>
+  <p class="muted">Masuk atau buat akun untuk menyimpan data secara online.</p>
+
+  <form id="authForm">
+    <label>
+      Email
+      <input
+        id="authEmail"
+        type="email"
+        autocomplete="email"
+        required
+      >
+    </label>
+
+    <label>
+      Kata sandi
+      <input
+        id="authPassword"
+        type="password"
+        autocomplete="current-password"
+        minlength="6"
+        required
+      >
+    </label>
+
+    <button class="button primary" id="authSubmit" type="submit">
+      Masuk
+    </button>
+
+    <button class="button secondary" id="toggleAuthMode" type="button">
+      Buat akun baru
+    </button>
+
+    <p id="authMessage" class="message" aria-live="polite"></p>
+  </form>
+
+  <button class="button secondary" id="logoutButton" type="button" hidden>
+    Keluar
+  </button>
+</section>
     <section class="hero">
       <div>
         <p class="eyebrow">KEUANGAN BULANAN</p>
