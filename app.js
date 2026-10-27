@@ -1,4 +1,3 @@
-
 import { auth, db } from "./firebase.js";
 
 import {
@@ -30,6 +29,14 @@ const DEFAULT_MONTH = {
   transactions: []
 };
 
+const DEFAULT_USER_PROFILE = {
+  username: "",
+  bio: "Menuju kebebasan finansial 🚀",
+  targetAnnual: 20000000,
+  avatarUrl: "",
+  theme: "light"
+};
+
 const cloneDefault = () => JSON.parse(JSON.stringify(DEFAULT_MONTH));
 const today = () => {
   const d = new Date();
@@ -42,6 +49,7 @@ const formatMoney = n => new Intl.NumberFormat("id-ID", {
 
 let activeMonth = today().slice(0, 7);
 let months = { [activeMonth]: cloneDefault() };
+let userProfile = { ...DEFAULT_USER_PROFILE };
 let currentUser = null;
 let unsubscribeData = null;
 let dataReady = false;
@@ -119,34 +127,11 @@ function cleanMonths(input) {
   return result;
 }
 
-// Memindahkan data cloud lama ke struktur per bulan.
-function migrateLegacy(old) {
-  const base = cleanMonth({
-    income: old.income ?? DEFAULT_MONTH.income,
-    allocations: old.allocations ?? DEFAULT_MONTH.allocations,
-    transactions: old.transactions ?? []
-  });
-
-  const result = {};
-  for (const transaction of base.transactions) {
-    const key = monthFromDate(transaction.date);
-    if (!result[key]) result[key] = { ...cloneDefault(), transactions: [] };
-    result[key].transactions.push(transaction);
-  }
-
-  result[activeMonth] = {
-    income: base.income,
-    allocations: base.allocations,
-    transactions: result[activeMonth]?.transactions || []
-  };
-  return result;
-}
-
 function saveState() {
   if (!currentUser || !dataReady) return Promise.resolve();
 
   const uid = currentUser.uid;
-  const snapshot = JSON.parse(JSON.stringify({ months }));
+  const snapshot = JSON.parse(JSON.stringify({ months, profile: userProfile }));
   const ref = doc(db, "users", uid, "appData", "main");
 
   saveQueue = saveQueue
@@ -157,8 +142,7 @@ function saveState() {
     })
     .catch(error => {
       console.error("Penyimpanan cloud gagal:", error);
-      message("transactionMessage", "Gagal menyinkronkan data. Periksa internet dan aturan Firestore.", "error");
-      message("budgetMessage", "Gagal menyinkronkan data. Periksa internet dan aturan Firestore.", "error");
+      message("transactionMessage", "Gagal menyinkronkan data cloud.", "error");
     });
 
   return saveQueue;
@@ -181,8 +165,46 @@ function balance(category, key = activeMonth) {
     - transactionTotal("expense", category, key);
 }
 
+// MENGHITUNG SALDO AKUMULASI DARI SEMUA BULAN UNTUK KATEGORI SPESIFIK
+function calculateAllTimeBalance(category) {
+  let total = 0;
+  for (const key of Object.keys(months)) {
+    total += balance(category, key);
+  }
+  return total;
+}
+
+// MENGHITUNG TOTAL KEKAYAAN AKUMULASI (SEMUA SALDO KATEGORI TERMASUK UANG BEBAS)
+function calculateTotalWealth() {
+  let total = 0;
+  for (const cat of Object.keys(CATEGORIES)) {
+    total += calculateAllTimeBalance(cat);
+  }
+  return total;
+}
+
+function applyTheme(theme) {
+  userProfile.theme = theme;
+  document.documentElement.setAttribute("data-theme", theme);
+  $("themeIcon").textContent = theme === "dark" ? "☀️" : "🌙";
+  localStorage.setItem("ruangDanaTheme", theme);
+}
+
 function renderSummary() {
   const data = monthData();
+
+  // Akumulasi Kekayaan & Kategori All-Time
+  const totalWealth = calculateTotalWealth();
+  const totalTabungan = calculateAllTimeBalance("tabungan");
+  const totalDarurat = calculateAllTimeBalance("darurat");
+  const totalInvestasi = calculateAllTimeBalance("investasi");
+
+  $("totalWealth").textContent = formatMoney(totalWealth);
+  $("totalTabungan").textContent = formatMoney(totalTabungan);
+  $("totalDarurat").textContent = formatMoney(totalDarurat);
+  $("totalInvestasi").textContent = formatMoney(totalInvestasi);
+
+  // Bulan Ini
   $("totalIncome").textContent = formatMoney(data.income + transactionTotal("income"));
   $("totalSpent").textContent = formatMoney(transactionTotal("expense"));
   $("freeRemaining").textContent = formatMoney(balance("bebas"));
@@ -193,6 +215,33 @@ function renderSummary() {
 
   $("budgetIncome").value = data.income;
   $("transactionMonthLabel").textContent = `Bulan laporan: ${activeMonth}`;
+
+  // Render Visualisasi Target Tumpukan Uang (Tabungan + Darurat + Investasi)
+  renderTargetMoneyStack(totalTabungan + totalDarurat + totalInvestasi);
+}
+
+function renderTargetMoneyStack(currentProgress) {
+  const targetGoal = userProfile.targetAnnual || 20000000;
+  let percentage = targetGoal > 0 ? (currentProgress / targetGoal) * 100 : 0;
+  if (percentage < 0) percentage = 0;
+
+  const displayPercentage = Math.round(percentage);
+
+  $("targetCurrentAmount").textContent = formatMoney(currentProgress);
+  $("targetGoalAmount").textContent = formatMoney(targetGoal);
+  $("targetPercentageText").textContent = `${displayPercentage}%`;
+
+  const trackBar = $("moneyTrackBar");
+  trackBar.style.width = `${Math.min(100, percentage)}%`;
+
+  const banner = $("congratulationsBanner");
+  if (currentProgress >= targetGoal && targetGoal > 0) {
+    banner.hidden = false;
+    $("congratulationsText").textContent =
+      `🥳 Selamat! Anda berhasil mencapai target tahun ini sebesar ${formatMoney(targetGoal)}!`;
+  } else {
+    banner.hidden = true;
+  }
 }
 
 function renderAllocations() {
@@ -228,7 +277,7 @@ function renderAllocations() {
 
     const remainingText = document.createElement("p");
     remainingText.className = "muted small";
-    remainingText.textContent = `Sisa: ${formatMoney(remaining)}`;
+    remainingText.textContent = `Sisa bulan ini: ${formatMoney(remaining)}`;
 
     card.append(heading, value, detail, progress, remainingText);
     overview.appendChild(card);
@@ -311,7 +360,6 @@ function renderTransactions() {
   $("recentEmptyState").hidden = sorted.length > 0;
 }
 
-// Grafik dibuat langsung dengan canvas, tanpa pustaka tambahan.
 function renderChart() {
   const canvas = $("financeChart");
   const ctx = canvas.getContext("2d");
@@ -326,10 +374,11 @@ function renderChart() {
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
   ctx.clearRect(0, 0, width, height);
 
-  const green = "#247653";
-  const red = "#cf6b67";
-  const muted = "#738078";
-  const grid = "#e3e9e3";
+  const isDark = userProfile.theme === "dark";
+  const green = isDark ? "#34a875" : "#247653";
+  const red = isDark ? "#e56b6e" : "#cf6b67";
+  const muted = isDark ? "#9aa8a0" : "#738078";
+  const grid = isDark ? "#2d3d36" : "#e3e9e3";
   const income = monthData().income + transactionTotal("income");
   const expense = transactionTotal("expense");
 
@@ -399,11 +448,44 @@ function renderChart() {
     : "Grafik mengikuti bulan yang dipilih.";
 }
 
+function updateProfileUI(user) {
+  const email = user ? user.email : "";
+  const fallbackName = email.includes("@") ? email.split("@")[0] : "Akun saya";
+  const name = userProfile.username || fallbackName;
+  const initial = name.charAt(0).toUpperCase() || "U";
+
+  $("profileName").textContent = name;
+  $("profileMenuName").textContent = name;
+  $("profileEmail").textContent = email;
+  $("profileDetailsName").textContent = name;
+  $("profileDetailsEmail").textContent = email;
+  $("profileDetailsBio").textContent = userProfile.bio || "";
+
+  $("editUsername").value = name;
+  $("editBio").value = userProfile.bio || "";
+  $("editTargetAnnual").value = userProfile.targetAnnual || 20000000;
+
+  // Render Foto Profil Avatar
+  const avatars = [$("profileAvatar"), $("profileDetailsAvatar")];
+  avatars.forEach(el => {
+    if (userProfile.avatarUrl) {
+      el.textContent = "";
+      el.style.backgroundImage = `url(${userProfile.avatarUrl})`;
+      el.style.backgroundSize = "cover";
+      el.style.backgroundPosition = "center";
+    } else {
+      el.style.backgroundImage = "none";
+      el.textContent = initial;
+    }
+  });
+}
+
 function renderAll() {
   renderSummary();
   renderAllocations();
   renderTransactions();
   renderChart();
+  if (currentUser) updateProfileUI(currentUser);
 }
 
 function showPage(id) {
@@ -417,20 +499,6 @@ function showPage(id) {
 
   $("profileMenu").hidden = true;
   $("profileButton").setAttribute("aria-expanded", "false");
-}
-
-function updateProfile(user) {
-  const email = user.email || "Akun pengguna";
-  const name = email.includes("@") ? email.split("@")[0] : email;
-  const initial = name.charAt(0).toUpperCase() || "U";
-
-  $("profileName").textContent = name;
-  $("profileMenuName").textContent = name;
-  $("profileEmail").textContent = email;
-  $("profileAvatar").textContent = initial;
-  $("profileDetailsName").textContent = name;
-  $("profileDetailsEmail").textContent = email;
-  $("profileDetailsAvatar").textContent = initial;
 }
 
 async function logout() {
@@ -447,6 +515,17 @@ async function logout() {
     $("logoutButton").disabled = false;
     $("profileLogoutButton").disabled = false;
   }
+}
+
+function wireThemeToggle() {
+  const savedTheme = localStorage.getItem("ruangDanaTheme") || "light";
+  applyTheme(savedTheme);
+
+  $("themeToggleBtn").addEventListener("click", () => {
+    const nextTheme = userProfile.theme === "dark" ? "light" : "dark";
+    applyTheme(nextTheme);
+    saveState();
+  });
 }
 
 function wireNavigation() {
@@ -486,6 +565,60 @@ function wireNavigation() {
   });
 
   window.addEventListener("resize", renderChart);
+}
+
+function wireProfileAndTarget() {
+  // Form simpan username, bio, target
+  $("profileForm").addEventListener("submit", async event => {
+    event.preventDefault();
+
+    const username = $("editUsername").value.trim();
+    const bio = $("editBio").value.trim();
+    const targetAnnual = Number($("editTargetAnnual").value);
+
+    if (!username) {
+      message("profileFormMessage", "Username tidak boleh kosong.", "error");
+      return;
+    }
+
+    if (!Number.isSafeInteger(targetAnnual) || targetAnnual < 0) {
+      message("profileFormMessage", "Target tahunan harus berupa nominal yang valid.", "error");
+      return;
+    }
+
+    userProfile.username = username;
+    userProfile.bio = bio;
+    userProfile.targetAnnual = targetAnnual;
+
+    await saveState();
+    renderAll();
+    message("profileFormMessage", "Profil dan target berhasil diperbarui!", "success");
+  });
+
+  // Unggah Foto Profil dari Perangkat
+  $("avatarInput").addEventListener("change", event => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      message("profileFormMessage", "Pilih file gambar yang valid.", "error");
+      return;
+    }
+
+    if (file.size > 3 * 1024 * 1024) {
+      message("profileFormMessage", "Ukuran foto maksimal 3MB.", "error");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      userProfile.avatarUrl = reader.result;
+      await saveState();
+      renderAll();
+      message("profileFormMessage", "Foto profil berhasil diganti!", "success");
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 function wireBudget() {
@@ -630,7 +763,6 @@ async function connectUser(user) {
   currentUser = user;
   dataReady = false;
 
-  updateProfile(user);
   $("authView").hidden = true;
   $("appView").hidden = false;
   showPage("dashboard");
@@ -644,16 +776,19 @@ async function connectUser(user) {
 
     if (!snapshot.exists()) {
       months = { [activeMonth]: cloneDefault() };
-      await setDoc(ref, { months });
+      userProfile = { ...DEFAULT_USER_PROFILE };
+      await setDoc(ref, { months, profile: userProfile });
     } else {
       const cloud = snapshot.data();
-      months = cloud.months
-        ? cleanMonths(cloud.months)
-        : migrateLegacy(cloud);
+      months = cloud.months ? cleanMonths(cloud.months) : {};
       if (!months[activeMonth]) months[activeMonth] = cloneDefault();
 
-      // Menyimpan struktur bulanan baru, termasuk hasil migrasi.
-      await setDoc(ref, { months });
+      if (cloud.profile) {
+        userProfile = { ...DEFAULT_USER_PROFILE, ...cloud.profile };
+      }
+      if (userProfile.theme) {
+        applyTheme(userProfile.theme);
+      }
     }
 
     if (currentUser?.uid !== user.uid) return;
@@ -665,27 +800,24 @@ async function connectUser(user) {
 
       try {
         const cloud = remote.data();
-        const latest = cloud.months ? cleanMonths(cloud.months) : migrateLegacy(cloud);
-        months = latest;
+        months = cloud.months ? cleanMonths(cloud.months) : {};
         if (!months[activeMonth]) months[activeMonth] = cloneDefault();
 
-        localStorage.setItem("ruangDanaDataV1", JSON.stringify({ months }));
+        if (cloud.profile) {
+          userProfile = { ...DEFAULT_USER_PROFILE, ...cloud.profile };
+          applyTheme(userProfile.theme);
+        }
+
         renderAll();
       } catch (error) {
         console.error("Data cloud tidak valid:", error);
-        message("transactionMessage", "Data cloud tidak dapat dibaca. Jangan lakukan perubahan sebelum memeriksa data.", "error");
       }
-    }, error => {
-      console.error("Sinkronisasi Firestore gagal:", error);
-      message("transactionMessage", "Sinkronisasi cloud terputus. Periksa koneksi dan aturan Firestore.", "error");
     });
   } catch (error) {
     console.error("Gagal memuat data:", error);
     $("appView").hidden = true;
     $("authView").hidden = false;
-    message("authMessage",
-      "Tidak dapat memuat data dari Firestore. Periksa konfigurasi Firebase dan aturan database.",
-      "error");
+    message("authMessage", "Tidak dapat memuat data dari Firestore.", "error");
     await signOut(auth).catch(() => {});
   }
 }
@@ -696,6 +828,7 @@ function disconnectUser() {
   currentUser = null;
   dataReady = false;
   months = { [activeMonth]: cloneDefault() };
+  userProfile = { ...DEFAULT_USER_PROFILE };
   $("authForm").reset();
   $("profileMenu").hidden = true;
   $("profileButton").setAttribute("aria-expanded", "false");
@@ -708,8 +841,10 @@ function disconnectUser() {
 $("monthPicker").value = activeMonth;
 $("date").value = today();
 
+wireThemeToggle();
 wireAuth();
 wireNavigation();
+wireProfileAndTarget();
 wireBudget();
 wireTransactions();
 
