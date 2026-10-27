@@ -1,132 +1,302 @@
+
 <!doctype html>
 <html lang="id">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Pengelola anggaran dan transaksi keuangan bulanan.">
-  <title>Ruang Dana — Pengelola Keuangan</title>
+  <meta name="theme-color" content="#f4f7f4">
+  <meta name="description" content="Ruang Dana, aplikasi pengelola keuangan pribadi.">
+  <title>Ruang Dana — Keuangan Pribadi</title>
   <link rel="stylesheet" href="style.css">
   <script type="module" src="app.js"></script>
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="./">Ruang Dana</a>
-    <span class="privacy">Versi awal · data tersimpan di browser ini</span>
-  </header>
-  <main class="container">
-    <section class="panel" id="authSection">
-  <h2>Masuk ke Ruang Dana</h2>
-  <p class="muted">Masuk atau buat akun untuk menyimpan data secara online.</p>
+  <section id="authView" class="auth-view">
+    <div class="auth-brand">
+      <span class="brand-mark">R</span>
+      <span>Ruang Dana</span>
+    </div>
 
-  <form id="authForm">
-    <label>
-      Email
-      <input
-        id="authEmail"
-        type="email"
-        autocomplete="email"
-        required
-      >
-    </label>
+    <div class="auth-card">
+      <p class="eyebrow">KEUANGAN LEBIH TERATUR</p>
+      <h1 id="authTitle">Selamat datang</h1>
+      <p id="authSubtitle" class="muted">Masuk untuk melihat keuanganmu.</p>
 
-    <label>
-      Kata sandi
-      <input
-        id="authPassword"
-        type="password"
-        autocomplete="current-password"
-        minlength="6"
-        required
-      >
-    </label>
+      <form id="authForm">
+        <label for="authEmail">Email</label>
+        <input id="authEmail" type="email" autocomplete="email"
+          placeholder="nama@email.com" required>
 
-    <button class="button primary" id="authSubmit" type="submit">
-      Masuk
-    </button>
+        <label for="authPassword">Kata sandi</label>
+        <input id="authPassword" type="password" minlength="6"
+          autocomplete="current-password" placeholder="Minimal 6 karakter" required>
 
-    <button class="button secondary" id="toggleAuthMode" type="button">
-      Buat akun baru
-    </button>
-
-    <p id="authMessage" class="message" aria-live="polite"></p>
-  </form>
-
-  <button class="button secondary" id="logoutButton" type="button" hidden>
-    Keluar
-  </button>
-</section>
-    <section class="hero">
-      <div>
-        <p class="eyebrow">KEUANGAN BULANAN</p>
-        <h1>Uangmu, lebih terencana.</h1>
-        <p>Atur alokasi, catat transaksi, dan pantau anggaran tanpa melewati saldo yang tersedia.</p>
-      </div>
-      <label class="income-field">Pendapatan bulan ini (Rp)
-        <input id="income" type="number" min="0" step="1000" value="2000000">
-      </label>
-    </section>
-
-    <section class="panel">
-      <div class="section-heading">
-        <div><p class="eyebrow">RENCANA</p><h2>Alokasi anggaran</h2></div>
-        <button id="saveBudget" class="button secondary">Simpan alokasi</button>
-      </div>
-      <p class="muted">Persentase harus berjumlah 100%. Alokasi adalah rencana, bukan transaksi pemindahan uang.</p>
-      <div id="allocations" class="allocation-grid"></div>
-      <p id="allocationMessage" class="message" aria-live="polite"></p>
-    </section>
-
-    <section class="summary-grid" aria-label="Ringkasan keuangan">
-      <article class="summary-card"><span>Total pendapatan</span><strong id="totalIncome">Rp0</strong></article>
-      <article class="summary-card"><span>Total pengeluaran</span><strong id="totalSpent">Rp0</strong></article>
-      <article class="summary-card"><span>Sisa uang bebas</span><strong id="freeRemaining">Rp0</strong></article>
-      <article class="summary-card"><span>Anggaran bebas terpakai</span><strong id="freeUsed">0%</strong></article>
-    </section>
-
-    <section class="panel">
-      <div class="section-heading"><div><p class="eyebrow">CATATAN</p><h2>Tambah transaksi</h2></div></div>
-      <form id="transactionForm" class="transaction-form">
-        <label>Jenis
-          <select id="type"><option value="expense">Pengeluaran</option><option value="income">Pemasukan tambahan</option></select>
-        </label>
-        <label>Kategori
-          <select id="category">
-            <option value="bebas">Uang bebas pakai</option>
-            <option value="investasi">Investasi</option>
-            <option value="tabungan">Tabungan</option>
-            <option value="darurat">Dana darurat</option>
-          </select>
-        </label>
-        <label>Nominal (Rp)<input id="amount" type="number" min="1" step="1" required placeholder="25000"></label>
-        <label>Tanggal<input id="date" type="date" required></label>
-        <label class="wide">Keterangan<input id="note" type="text" maxlength="120" placeholder="Contoh: makan siang"></label>
-        <button class="button primary" type="submit">Simpan transaksi</button>
+        <button id="authSubmit" class="button primary full-width" type="submit">
+          Masuk
+        </button>
       </form>
-      <p id="transactionMessage" class="message" aria-live="polite"></p>
-      <p class="muted small">Versi awal ini mencegah pengeluaran melebihi saldo kategori. Catatan transaksi disimpan lokal pada browser ini.</p>
-    </section>
 
-    <section class="panel">
-      <div class="section-heading"><div><p class="eyebrow">RIWAYAT</p><h2>Transaksi terbaru</h2></div></div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Tanggal</th><th>Transaksi</th><th>Kategori</th><th>Nominal</th><th></th></tr></thead>
-          <tbody id="transactions"></tbody>
-        </table>
-      </div>
-      <p id="emptyState" class="muted">Belum ada transaksi. Tambahkan transaksi pertamamu di atas.</p>
-    </section>
+      <p id="authMessage" class="message" aria-live="polite"></p>
 
-    <section class="panel">
-      <div class="section-heading"><div><p class="eyebrow">CADANGAN</p><h2>Cadangkan datamu</h2></div></div>
-      <p class="muted">Ekspor file JSON secara berkala. Simpan file cadangan di tempat pribadi yang aman. Jangan unggah file ini ke repository publik.</p>
-      <div class="backup-actions">
-        <button id="exportData" class="button secondary">Ekspor cadangan</button>
-        <label class="button secondary file-button">Impor cadangan<input id="importData" type="file" accept="application/json,.json"></label>
+      <p class="auth-switch">
+        <span id="authSwitchText">Belum punya akun?</span>
+        <button id="toggleAuthMode" class="text-button" type="button">Buat akun</button>
+      </p>
+    </div>
+
+    <p class="auth-footnote">Keuanganmu, dikelola dengan lebih teratur.</p>
+  </section>
+
+  <div id="appView" hidden>
+    <header class="topbar">
+      <a class="brand" href="#dashboard">
+        <span class="brand-mark">R</span>
+        <span>Ruang Dana</span>
+      </a>
+
+      <div class="profile-area">
+        <button id="profileButton" class="profile-button" type="button"
+          aria-expanded="false" aria-controls="profileMenu">
+          <span id="profileAvatar" class="avatar">U</span>
+          <span class="profile-button-text">
+            <strong id="profileName">Akun saya</strong>
+            <small>Profil</small>
+          </span>
+          <span aria-hidden="true">⌄</span>
+        </button>
+
+        <div id="profileMenu" class="profile-menu" hidden>
+          <div class="profile-menu-info">
+            <strong id="profileMenuName">Akun saya</strong>
+            <span id="profileEmail" class="muted"></span>
+          </div>
+          <button id="profileDetailsButton" class="menu-item" type="button">
+            Informasi akun
+          </button>
+          <button id="logoutButton" class="menu-item danger" type="button">
+            Keluar dari akun
+          </button>
+          <p id="profileMessage" class="message" aria-live="polite"></p>
+        </div>
       </div>
-      <p id="backupMessage" class="message" aria-live="polite"></p>
-    </section>
-    <footer><p>Ruang Dana · Prototipe edukasi. Periksa data dan cadangkan secara berkala.</p></footer>
-  </main>
+    </header>
+
+    <nav class="main-nav" aria-label="Navigasi utama">
+      <button class="nav-item active" type="button" data-view="dashboard">Ringkasan</button>
+      <button class="nav-item" type="button" data-view="transactionsView">Transaksi</button>
+      <button class="nav-item" type="button" data-view="budgetView">Anggaran</button>
+    </nav>
+
+    <main class="container">
+      <section id="dashboard" class="page-view">
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">DASHBOARD KEUANGAN</p>
+            <h1>Keuanganmu, lebih terarah.</h1>
+            <p class="muted">Pantau pemasukan dan pengeluaran setiap bulan.</p>
+          </div>
+          <label class="month-control" for="monthPicker">
+            Bulan laporan
+            <input id="monthPicker" type="month" required>
+          </label>
+        </div>
+
+        <div class="summary-grid">
+          <article class="summary-card">
+            <span>Pemasukan bulan ini</span>
+            <strong id="totalIncome">Rp0</strong>
+            <small>Termasuk pemasukan tambahan</small>
+          </article>
+          <article class="summary-card">
+            <span>Total pengeluaran</span>
+            <strong id="totalSpent">Rp0</strong>
+            <small>Transaksi bulan terpilih</small>
+          </article>
+          <article class="summary-card">
+            <span>Sisa uang bebas</span>
+            <strong id="freeRemaining">Rp0</strong>
+            <small>Anggaran bebas dikurangi pengeluaran</small>
+          </article>
+          <article class="summary-card">
+            <span>Anggaran bebas terpakai</span>
+            <strong id="freeUsed">0%</strong>
+            <small>Dari alokasi uang bebas</small>
+          </article>
+        </div>
+
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">ANALISIS</p>
+              <h2>Grafik keuangan</h2>
+            </div>
+            <label class="compact-select" for="chartMode">
+              <span class="sr-only">Jenis grafik</span>
+              <select id="chartMode">
+                <option value="overview">Pemasukan dan pengeluaran</option>
+                <option value="categories">Pengeluaran per kategori</option>
+              </select>
+            </label>
+          </div>
+          <p id="chartSummary" class="muted"></p>
+          <div class="chart-wrap">
+            <canvas id="financeChart" role="img"
+              aria-label="Grafik keuangan bulan terpilih">
+              Grafik keuangan.
+            </canvas>
+          </div>
+          <p id="chartMessage" class="muted small"></p>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">RENCANA BULANAN</p>
+              <h2>Alokasi anggaran</h2>
+            </div>
+            <button id="goToBudget" class="button secondary" type="button">Atur anggaran</button>
+          </div>
+          <div id="allocations" class="allocation-grid"></div>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">AKTIVITAS</p>
+              <h2>Transaksi terbaru</h2>
+            </div>
+            <button class="button secondary" type="button" data-view="transactionsView">
+              Lihat semua
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Tanggal</th><th>Transaksi</th><th>Kategori</th><th>Nominal</th><th>Aksi</th></tr>
+              </thead>
+              <tbody id="recentTransactions"></tbody>
+            </table>
+          </div>
+          <p id="recentEmptyState" class="empty-state">Belum ada transaksi bulan ini.</p>
+        </section>
+      </section>
+
+      <section id="transactionsView" class="page-view" hidden>
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">CATATAN KEUANGAN</p>
+            <h1>Transaksi</h1>
+            <p class="muted">Catat pemasukan tambahan dan pengeluaran.</p>
+          </div>
+        </div>
+
+        <section class="panel">
+          <h2>Tambah transaksi</h2>
+          <form id="transactionForm" class="transaction-form">
+            <label for="type">Jenis transaksi
+              <select id="type" required>
+                <option value="expense">Pengeluaran</option>
+                <option value="income">Pemasukan tambahan</option>
+              </select>
+            </label>
+
+            <label for="category">Kategori
+              <select id="category" required>
+                <option value="bebas">Uang bebas pakai</option>
+                <option value="investasi">Investasi</option>
+                <option value="tabungan">Tabungan</option>
+                <option value="darurat">Dana darurat</option>
+              </select>
+            </label>
+
+            <label for="amount">Nominal (Rp)
+              <input id="amount" type="number" min="1" step="1"
+                placeholder="25000" required>
+            </label>
+
+            <label for="date">Tanggal
+              <input id="date" type="date" required>
+            </label>
+
+            <label class="wide" for="note">Keterangan
+              <input id="note" type="text" maxlength="120" placeholder="Contoh: makan siang">
+            </label>
+
+            <button class="button primary" type="submit">Simpan transaksi</button>
+          </form>
+          <p id="transactionMessage" class="message" aria-live="polite"></p>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <h2>Riwayat transaksi</h2>
+              <p id="transactionMonthLabel" class="muted"></p>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Tanggal</th><th>Transaksi</th><th>Kategori</th><th>Nominal</th><th>Aksi</th></tr>
+              </thead>
+              <tbody id="transactions"></tbody>
+            </table>
+          </div>
+          <p id="emptyState" class="empty-state">Belum ada transaksi pada bulan terpilih.</p>
+        </section>
+      </section>
+
+      <section id="budgetView" class="page-view" hidden>
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">PERENCANAAN</p>
+            <h1>Anggaran bulanan</h1>
+            <p class="muted">Setiap bulan memiliki pendapatan dan alokasinya sendiri.</p>
+          </div>
+        </div>
+
+        <section class="panel">
+          <label for="budgetIncome">Pendapatan utama bulan terpilih (Rp)
+            <input id="budgetIncome" type="number" min="0" step="1000" required>
+          </label>
+          <p class="muted small">Pemasukan tambahan dicatat melalui formulir transaksi.</p>
+        </section>
+
+        <section class="panel">
+          <h2>Pembagian anggaran</h2>
+          <p class="muted">Total persentase harus tepat 100%.</p>
+          <div id="budgetAllocations" class="budget-allocation-list"></div>
+          <button id="saveBudget" class="button primary" type="button">
+            Simpan anggaran bulan ini
+          </button>
+          <p id="budgetMessage" class="message" aria-live="polite"></p>
+        </section>
+      </section>
+
+      <section id="profileView" class="page-view" hidden>
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">AKUN</p>
+            <h1>Informasi profil</h1>
+          </div>
+        </div>
+        <section class="panel profile-details">
+          <span id="profileDetailsAvatar" class="avatar avatar-large">U</span>
+          <div>
+            <h2 id="profileDetailsName">Akun saya</h2>
+            <p id="profileDetailsEmail" class="muted"></p>
+            <p class="muted small">Login menggunakan Firebase Authentication.</p>
+          </div>
+          <button id="profileLogoutButton" class="button danger-button" type="button">
+            Keluar dari akun
+          </button>
+        </section>
+      </section>
+
+      <footer class="app-footer">
+        <p>Ruang Dana · Pengelola keuangan pribadi.</p>
+      </footer>
+    </main>
+  </div>
 </body>
 </html>
