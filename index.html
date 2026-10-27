@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Pengelola anggaran dan transaksi keuangan bulanan.">
+  <title>Ruang Dana — Pengelola Keuangan</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./">Ruang Dana</a>
+    <span class="privacy">Versi awal · data tersimpan di browser ini</span>
+  </header>
+  <main class="container">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">KEUANGAN BULANAN</p>
+        <h1>Uangmu, lebih terencana.</h1>
+        <p>Atur alokasi, catat transaksi, dan pantau anggaran tanpa melewati saldo yang tersedia.</p>
+      </div>
+      <label class="income-field">Pendapatan bulan ini (Rp)
+        <input id="income" type="number" min="0" step="1000" value="2000000">
+      </label>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div><p class="eyebrow">RENCANA</p><h2>Alokasi anggaran</h2></div>
+        <button id="saveBudget" class="button secondary">Simpan alokasi</button>
+      </div>
+      <p class="muted">Persentase harus berjumlah 100%. Alokasi adalah rencana, bukan transaksi pemindahan uang.</p>
+      <div id="allocations" class="allocation-grid"></div>
+      <p id="allocationMessage" class="message" aria-live="polite"></p>
+    </section>
+
+    <section class="summary-grid" aria-label="Ringkasan keuangan">
+      <article class="summary-card"><span>Total pendapatan</span><strong id="totalIncome">Rp0</strong></article>
+      <article class="summary-card"><span>Total pengeluaran</span><strong id="totalSpent">Rp0</strong></article>
+      <article class="summary-card"><span>Sisa uang bebas</span><strong id="freeRemaining">Rp0</strong></article>
+      <article class="summary-card"><span>Anggaran bebas terpakai</span><strong id="freeUsed">0%</strong></article>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading"><div><p class="eyebrow">CATATAN</p><h2>Tambah transaksi</h2></div></div>
+      <form id="transactionForm" class="transaction-form">
+        <label>Jenis
+          <select id="type"><option value="expense">Pengeluaran</option><option value="income">Pemasukan tambahan</option></select>
+        </label>
+        <label>Kategori
+          <select id="category">
+            <option value="bebas">Uang bebas pakai</option>
+            <option value="investasi">Investasi</option>
+            <option value="tabungan">Tabungan</option>
+            <option value="darurat">Dana darurat</option>
+          </select>
+        </label>
+        <label>Nominal (Rp)<input id="amount" type="number" min="1" step="1" required placeholder="25000"></label>
+        <label>Tanggal<input id="date" type="date" required></label>
+        <label class="wide">Keterangan<input id="note" type="text" maxlength="120" placeholder="Contoh: makan siang"></label>
+        <button class="button primary" type="submit">Simpan transaksi</button>
+      </form>
+      <p id="transactionMessage" class="message" aria-live="polite"></p>
+      <p class="muted small">Versi awal ini mencegah pengeluaran melebihi saldo kategori. Catatan transaksi disimpan lokal pada browser ini.</p>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading"><div><p class="eyebrow">RIWAYAT</p><h2>Transaksi terbaru</h2></div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Tanggal</th><th>Transaksi</th><th>Kategori</th><th>Nominal</th><th></th></tr></thead>
+          <tbody id="transactions"></tbody>
+        </table>
+      </div>
+      <p id="emptyState" class="muted">Belum ada transaksi. Tambahkan transaksi pertamamu di atas.</p>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading"><div><p class="eyebrow">CADANGAN</p><h2>Cadangkan datamu</h2></div></div>
+      <p class="muted">Ekspor file JSON secara berkala. Simpan file cadangan di tempat pribadi yang aman. Jangan unggah file ini ke repository publik.</p>
+      <div class="backup-actions">
+        <button id="exportData" class="button secondary">Ekspor cadangan</button>
+        <label class="button secondary file-button">Impor cadangan<input id="importData" type="file" accept="application/json,.json"></label>
+      </div>
+      <p id="backupMessage" class="message" aria-live="polite"></p>
+    </section>
+    <footer><p>Ruang Dana · Prototipe edukasi. Periksa data dan cadangkan secara berkala.</p></footer>
+  </main>
+</body>
+</html>
