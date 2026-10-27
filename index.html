@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="id">
 <head>
@@ -24,12 +23,10 @@
 
       <form id="authForm">
         <label for="authEmail">Email</label>
-        <input id="authEmail" type="email" autocomplete="email"
-          placeholder="nama@email.com" required>
+        <input id="authEmail" type="email" autocomplete="email" placeholder="nama@email.com" required>
 
         <label for="authPassword">Kata sandi</label>
-        <input id="authPassword" type="password" minlength="6"
-          autocomplete="current-password" placeholder="Minimal 6 karakter" required>
+        <input id="authPassword" type="password" minlength="6" autocomplete="current-password" placeholder="Minimal 6 karakter" required>
 
         <button id="authSubmit" class="button primary full-width" type="submit">
           Masuk
@@ -54,29 +51,34 @@
         <span>Ruang Dana</span>
       </a>
 
-      <div class="profile-area">
-        <button id="profileButton" class="profile-button" type="button"
-          aria-expanded="false" aria-controls="profileMenu">
-          <span id="profileAvatar" class="avatar">U</span>
-          <span class="profile-button-text">
-            <strong id="profileName">Akun saya</strong>
-            <small>Profil</small>
-          </span>
-          <span aria-hidden="true">⌄</span>
+      <div class="topbar-actions">
+        <button id="themeToggleBtn" class="theme-toggle-btn" type="button" aria-label="Ubah Tema">
+          <span id="themeIcon">🌙</span>
         </button>
 
-        <div id="profileMenu" class="profile-menu" hidden>
-          <div class="profile-menu-info">
-            <strong id="profileMenuName">Akun saya</strong>
-            <span id="profileEmail" class="muted"></span>
+        <div class="profile-area">
+          <button id="profileButton" class="profile-button" type="button" aria-expanded="false" aria-controls="profileMenu">
+            <span id="profileAvatar" class="avatar">U</span>
+            <span class="profile-button-text">
+              <strong id="profileName">Akun saya</strong>
+              <small>Profil</small>
+            </span>
+            <span aria-hidden="true">⌄</span>
+          </button>
+
+          <div id="profileMenu" class="profile-menu" hidden>
+            <div class="profile-menu-info">
+              <strong id="profileMenuName">Akun saya</strong>
+              <span id="profileEmail" class="muted"></span>
+            </div>
+            <button id="profileDetailsButton" class="menu-item" type="button">
+              Informasi profil
+            </button>
+            <button id="logoutButton" class="menu-item danger" type="button">
+              Keluar dari akun
+            </button>
+            <p id="profileMessage" class="message" aria-live="polite"></p>
           </div>
-          <button id="profileDetailsButton" class="menu-item" type="button">
-            Informasi akun
-          </button>
-          <button id="logoutButton" class="menu-item danger" type="button">
-            Keluar dari akun
-          </button>
-          <p id="profileMessage" class="message" aria-live="polite"></p>
         </div>
       </div>
     </header>
@@ -85,15 +87,17 @@
       <button class="nav-item active" type="button" data-view="dashboard">Ringkasan</button>
       <button class="nav-item" type="button" data-view="transactionsView">Transaksi</button>
       <button class="nav-item" type="button" data-view="budgetView">Anggaran</button>
+      <button class="nav-item" type="button" data-view="profileView">Profil & Target</button>
     </nav>
 
     <main class="container">
+      <!-- DASHBOARD VIEW -->
       <section id="dashboard" class="page-view">
         <div class="page-heading">
           <div>
             <p class="eyebrow">DASHBOARD KEUANGAN</p>
             <h1>Keuanganmu, lebih terarah.</h1>
-            <p class="muted">Pantau pemasukan dan pengeluaran setiap bulan.</p>
+            <p class="muted">Pantau kekayaan, pemasukan, dan pengeluaran.</p>
           </div>
           <label class="month-control" for="monthPicker">
             Bulan laporan
@@ -101,29 +105,88 @@
           </label>
         </div>
 
+        <!-- STATS KEKAYAAN & KATEGORI AKUMULASI -->
         <div class="summary-grid">
+          <article class="summary-card highlight-card">
+            <span>Total Kekayaan Bersih</span>
+            <strong id="totalWealth">Rp0</strong>
+            <small>Seluruh saldo kategori (Aset)</small>
+          </article>
+          <article class="summary-card">
+            <span>Total Tabungan</span>
+            <strong id="totalTabungan">Rp0</strong>
+            <small>Akumulasi saldo tabungan</small>
+          </article>
+          <article class="summary-card">
+            <span>Dana Darurat</span>
+            <strong id="totalDarurat">Rp0</strong>
+            <small>Akumulasi dana darurat</small>
+          </article>
+          <article class="summary-card">
+            <span>Investasi</span>
+            <strong id="totalInvestasi">Rp0</strong>
+            <small>Akumulasi portofolio investasi</small>
+          </article>
+        </div>
+
+        <div class="summary-grid secondary-grid">
           <article class="summary-card">
             <span>Pemasukan bulan ini</span>
             <strong id="totalIncome">Rp0</strong>
-            <small>Termasuk pemasukan tambahan</small>
+            <small>Pendapatan + Transaksi Masuk</small>
           </article>
           <article class="summary-card">
-            <span>Total pengeluaran</span>
+            <span>Pengeluaran bulan ini</span>
             <strong id="totalSpent">Rp0</strong>
-            <small>Transaksi bulan terpilih</small>
+            <small>Total pengeluaran bulan ini</small>
           </article>
           <article class="summary-card">
-            <span>Sisa uang bebas</span>
+            <span>Sisa Uang Bebas</span>
             <strong id="freeRemaining">Rp0</strong>
-            <small>Anggaran bebas dikurangi pengeluaran</small>
+            <small>Bulan terpilih</small>
           </article>
           <article class="summary-card">
-            <span>Anggaran bebas terpakai</span>
+            <span>Anggaran Bebas Terpakai</span>
             <strong id="freeUsed">0%</strong>
             <small>Dari alokasi uang bebas</small>
           </article>
         </div>
 
+        <!-- VISUALISASI TARGET TUMPUKAN UANG -->
+        <section class="panel money-target-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">TARGET TAHUNAN</p>
+              <h2>Progres Tumpukan Uang Target</h2>
+            </div>
+            <button class="button secondary" type="button" data-view="profileView">Atur Target</button>
+          </div>
+
+          <div id="congratulationsBanner" class="congratulations-banner" hidden>
+            <div class="congratulations-content">
+              <span class="party-icon">🥳🎉</span>
+              <div>
+                <strong id="congratulationsText">Selamat! Anda berhasil mencapai target tahun ini!</strong>
+                <p class="small">Pertahankan disiplin keuangan Anda untuk masa depan yang lebih cerah.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="target-progress-header">
+            <span>Capaian (Tabungan + Darurat + Investasi): <strong id="targetCurrentAmount">Rp0</strong></span>
+            <span>Target: <strong id="targetGoalAmount">Rp0</strong> (<span id="targetPercentageText">0%</span>)</span>
+          </div>
+
+          <div class="money-track-container" aria-label="Visualisasi tumpukan uang target">
+            <div id="moneyTrackBar" class="money-track-bar">
+              <div class="money-stack-icon" title="Tumpukan Uang Target">
+                💵💵<br>💵💵💵
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- GRAFIK -->
         <section class="panel">
           <div class="section-heading">
             <div>
@@ -140,34 +203,33 @@
           </div>
           <p id="chartSummary" class="muted"></p>
           <div class="chart-wrap">
-            <canvas id="financeChart" role="img"
-              aria-label="Grafik keuangan bulan terpilih">
+            <canvas id="financeChart" role="img" aria-label="Grafik keuangan bulan terpilih">
               Grafik keuangan.
             </canvas>
           </div>
           <p id="chartMessage" class="muted small"></p>
         </section>
 
+        <!-- ALOKASI ANGGARAN -->
         <section class="panel">
           <div class="section-heading">
             <div>
               <p class="eyebrow">RENCANA BULANAN</p>
-              <h2>Alokasi anggaran</h2>
+              <h2>Alokasi anggaran bulan ini</h2>
             </div>
             <button id="goToBudget" class="button secondary" type="button">Atur anggaran</button>
           </div>
           <div id="allocations" class="allocation-grid"></div>
         </section>
 
+        <!-- TRANSAKSI TERBARU -->
         <section class="panel">
           <div class="section-heading">
             <div>
               <p class="eyebrow">AKTIVITAS</p>
               <h2>Transaksi terbaru</h2>
             </div>
-            <button class="button secondary" type="button" data-view="transactionsView">
-              Lihat semua
-            </button>
+            <button class="button secondary" type="button" data-view="transactionsView">Lihat semua</button>
           </div>
           <div class="table-wrap">
             <table>
@@ -181,12 +243,13 @@
         </section>
       </section>
 
+      <!-- TRANSAKSI VIEW -->
       <section id="transactionsView" class="page-view" hidden>
         <div class="page-heading">
           <div>
             <p class="eyebrow">CATATAN KEUANGAN</p>
             <h1>Transaksi</h1>
-            <p class="muted">Catat pemasukan tambahan dan pengeluaran.</p>
+            <p class="muted">Catat pemasukan dan pengeluaran untuk memperbarui saldo & kekayaan.</p>
           </div>
         </div>
 
@@ -210,8 +273,7 @@
             </label>
 
             <label for="amount">Nominal (Rp)
-              <input id="amount" type="number" min="1" step="1"
-                placeholder="25000" required>
+              <input id="amount" type="number" min="1" step="1" placeholder="25000" required>
             </label>
 
             <label for="date">Tanggal
@@ -246,6 +308,7 @@
         </section>
       </section>
 
+      <!-- ANGGARAN VIEW -->
       <section id="budgetView" class="page-view" hidden>
         <div class="page-heading">
           <div>
@@ -273,23 +336,60 @@
         </section>
       </section>
 
+      <!-- PROFIL & TARGET VIEW -->
       <section id="profileView" class="page-view" hidden>
         <div class="page-heading">
           <div>
-            <p class="eyebrow">AKUN</p>
-            <h1>Informasi profil</h1>
+            <p class="eyebrow">PENGATURAN AKUN & TARGET</p>
+            <h1>Profil & Target Finansial</h1>
+            <p class="muted">Kelola identitas, foto profil, dan target pencapaian tahunanmu.</p>
           </div>
         </div>
-        <section class="panel profile-details">
-          <span id="profileDetailsAvatar" class="avatar avatar-large">U</span>
-          <div>
-            <h2 id="profileDetailsName">Akun saya</h2>
-            <p id="profileDetailsEmail" class="muted"></p>
-            <p class="muted small">Login menggunakan Firebase Authentication.</p>
+
+        <section class="panel profile-edit-card">
+          <div class="profile-header-edit">
+            <div class="avatar-upload-wrapper">
+              <span id="profileDetailsAvatar" class="avatar avatar-large">U</span>
+              <label for="avatarInput" class="avatar-upload-btn" title="Ubah Foto Profil">
+                📷
+                <input type="file" id="avatarInput" accept="image/*" hidden>
+              </label>
+            </div>
+            <div>
+              <h2 id="profileDetailsName">Akun saya</h2>
+              <p id="profileDetailsEmail" class="muted"></p>
+              <p id="profileDetailsBio" class="bio-display"></p>
+            </div>
           </div>
-          <button id="profileLogoutButton" class="button danger-button" type="button">
-            Keluar dari akun
-          </button>
+
+          <form id="profileForm" class="profile-form">
+            <label for="editUsername">Nama Pengguna / Username
+              <input id="editUsername" type="text" maxlength="40" placeholder="Masukkan nama..." required>
+            </label>
+
+            <label for="editBio">Bio Singkat
+              <input id="editBio" type="text" maxlength="120" placeholder="Contoh: Menuju kebebasan finansial 🚀">
+            </label>
+
+            <label for="editTargetAnnual">Target Finansial Tahun Ini (Rp)
+              <input id="editTargetAnnual" type="number" min="0" step="10000" placeholder="Contoh: 20000000">
+            </label>
+
+            <button class="button primary" type="submit">Simpan Perubahan Profil</button>
+          </form>
+          <p id="profileFormMessage" class="message" aria-live="polite"></p>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <h2>Sesi Login</h2>
+              <p class="muted">Keluar dari aplikasi pada perangkat ini.</p>
+            </div>
+            <button id="profileLogoutButton" class="button danger-button" type="button">
+              Keluar dari akun
+            </button>
+          </div>
         </section>
       </section>
 
