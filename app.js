@@ -196,7 +196,12 @@ function applyTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
   // Menggunakan ikon ☼ untuk terang dan ☾ untuk gelap sesuai permintaan
   $("themeIcon").textContent = theme === "dark" ? "☼" : "☾";
+  $("themeToggleBtn").setAttribute("aria-label", theme === "dark" ? "Aktifkan mode terang" : "Aktifkan mode gelap");
+  $("profileLightTheme")?.setAttribute("aria-pressed", String(theme === "light"));
+  $("profileDarkTheme")?.setAttribute("aria-pressed", String(theme === "dark"));
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#111b19" : "#f5f6f1");
   localStorage.setItem("ruangDanaTheme", theme);
+  if ($("financeChart")) renderChart();
 }
 
 function renderSummary() {
@@ -383,17 +388,20 @@ function renderChart() {
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
   ctx.clearRect(0, 0, width, height);
 
-  const isDark = userProfile.theme === "dark";
-  const green = isDark ? "#34a875" : "#247653";
-  const red = isDark ? "#e56b6e" : "#cf6b67";
-  const muted = isDark ? "#9aa8a0" : "#738078";
-  const grid = isDark ? "#2d3d36" : "#e3e9e3";
+  const palette = getComputedStyle(document.documentElement);
+  const green = palette.getPropertyValue("--income-color").trim() || "#23865d";
+  const red = palette.getPropertyValue("--expense-color").trim() || "#c66b63";
+  const muted = palette.getPropertyValue("--muted").trim() || "#718078";
+  const grid = palette.getPropertyValue("--chart-grid").trim() || "#e4ebe4";
+  const textColor = palette.getPropertyValue("--text").trim() || "#1b3028";
   const income = monthData().income + transactionTotal("income");
   const expense = transactionTotal("expense");
 
   ctx.font = "12px system-ui, sans-serif";
   ctx.fillStyle = muted;
   ctx.strokeStyle = grid;
+  ctx.lineWidth = 1;
+  ctx.lineCap = "round";
 
   if (chartMode === "overview") {
     const top = 24;
@@ -417,8 +425,22 @@ function renderChart() {
       { label: "Pengeluaran", value: expense, color: red, x: center + gap / 2 }
     ].forEach(bar => {
       const barHeight = bar.value / max * chartHeight;
-      ctx.fillStyle = bar.color;
-      ctx.fillRect(bar.x, bottom - barHeight, barWidth, barHeight);
+      const barGradient = ctx.createLinearGradient(0, bottom - barHeight, 0, bottom);
+      barGradient.addColorStop(0, bar.color);
+      barGradient.addColorStop(1, bar.color + "B8");
+      ctx.fillStyle = barGradient;
+      const radius = Math.min(9, barWidth / 2, Math.max(0, barHeight / 2));
+      const barY = bottom - barHeight;
+      ctx.beginPath();
+      ctx.moveTo(bar.x + radius, barY);
+      ctx.lineTo(bar.x + barWidth - radius, barY);
+      ctx.quadraticCurveTo(bar.x + barWidth, barY, bar.x + barWidth, barY + radius);
+      ctx.lineTo(bar.x + barWidth, bottom);
+      ctx.lineTo(bar.x, bottom);
+      ctx.lineTo(bar.x, barY + radius);
+      ctx.quadraticCurveTo(bar.x, barY, bar.x + radius, barY);
+      ctx.closePath();
+      ctx.fill();
       ctx.fillStyle = muted;
       ctx.textAlign = "center";
       ctx.fillText(bar.label, bar.x + barWidth / 2, height - 12);
@@ -469,6 +491,21 @@ function updateProfileUI(user) {
   $("profileDetailsName").textContent = name;
   $("profileDetailsEmail").textContent = email;
   $("profileDetailsBio").textContent = userProfile.bio || "";
+
+  const transactionCount = Object.values(months || {}).reduce((total, month) => total + (Array.isArray(month.transactions) ? month.transactions.length : 0), 0);
+  const goalCount = Array.isArray(goals) ? goals.length : 0;
+  const walletCount = Array.isArray(wallets) ? wallets.length : 0;
+  $("profileTransactionCount").textContent = transactionCount.toLocaleString("id-ID");
+  $("profileGoalCount").textContent = goalCount.toLocaleString("id-ID");
+  $("profileWalletCount").textContent = walletCount.toLocaleString("id-ID");
+
+  const completedFields = [Boolean(userProfile.username), Boolean(userProfile.bio), Boolean(userProfile.avatarUrl), Number(userProfile.targetAnnual) > 0];
+  const completion = Math.round(completedFields.filter(Boolean).length / completedFields.length * 100);
+  $("profileCompletionLabel").textContent = `${completion}%`;
+  $("profileCompletionBar").style.width = `${completion}%`;
+  $("profileCompletionHint").textContent = completion === 100
+    ? "Profilmu sudah lengkap. Pertahankan kebiasaan finansial yang baik!"
+    : `${completedFields.filter(Boolean).length} dari 4 informasi profil sudah dilengkapi.`;
 
   $("editUsername").value = name;
   $("editBio").value = userProfile.bio || "";
@@ -530,11 +567,16 @@ function wireThemeToggle() {
   const savedTheme = localStorage.getItem("ruangDanaTheme") || "light";
   applyTheme(savedTheme);
 
-  $("themeToggleBtn").addEventListener("click", () => {
-    const nextTheme = userProfile.theme === "dark" ? "light" : "dark";
-    applyTheme(nextTheme);
+  const chooseTheme = theme => {
+    applyTheme(theme);
     saveState();
+  };
+
+  $("themeToggleBtn").addEventListener("click", () => {
+    chooseTheme(userProfile.theme === "dark" ? "light" : "dark");
   });
+  $("profileLightTheme")?.addEventListener("click", () => chooseTheme("light"));
+  $("profileDarkTheme")?.addEventListener("click", () => chooseTheme("dark"));
 }
 
 function wireNavigation() {
