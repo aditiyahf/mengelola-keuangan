@@ -376,7 +376,29 @@
           </div>
         </div>
 
+        <section class="profile-hero">
+          <div class="profile-hero-copy">
+            <span class="profile-kicker">RUANG DANA MEMBER</span>
+            <h2>Perjalanan finansialmu, satu langkah lebih dekat.</h2>
+            <p>Kelola identitas dan lihat perkembangan kebiasaan keuanganmu dari satu tempat.</p>
+          </div>
+          <div class="profile-hero-mark" aria-hidden="true">✦</div>
+        </section>
+
+        <section class="profile-stats-grid" aria-label="Ringkasan aktivitas profil">
+          <article class="profile-stat-card"><span class="profile-stat-icon">↗</span><div><small>Total transaksi</small><strong id="profileTransactionCount">0</strong></div></article>
+          <article class="profile-stat-card"><span class="profile-stat-icon">◎</span><div><small>Target aktif</small><strong id="profileGoalCount">0</strong></div></article>
+          <article class="profile-stat-card"><span class="profile-stat-icon">▣</span><div><small>Dompet</small><strong id="profileWalletCount">0</strong></div></article>
+        </section>
+
+        <section class="panel profile-progress-panel">
+          <div class="section-heading"><div><h2>Kelengkapan profil</h2><p class="muted">Lengkapi profil agar ruang kerjamu terasa lebih personal.</p></div><strong id="profileCompletionLabel" class="profile-completion-label">0%</strong></div>
+          <div class="profile-completion-track"><span id="profileCompletionBar"></span></div>
+          <p id="profileCompletionHint" class="muted small">Tambahkan informasi untuk melengkapi profilmu.</p>
+        </section>
+
         <section class="panel profile-edit-card">
+          <div class="profile-section-title"><div><p class="eyebrow">IDENTITAS</p><h2>Profil pribadi</h2></div><span class="profile-section-symbol">✧</span></div>
           <div class="profile-header-edit">
             <div class="avatar-upload-wrapper">
               <span id="profileDetailsAvatar" class="avatar avatar-large">U</span>
@@ -410,9 +432,17 @@
           <p id="profileFormMessage" class="message" aria-live="polite"></p>
         </section>
 
+        <section class="panel profile-theme-panel">
+          <div class="section-heading"><div><p class="eyebrow">PERSONALISASI</p><h2>Pilih suasana aplikasi</h2><p class="muted">Atur tampilan yang paling nyaman untuk aktivitasmu.</p></div></div>
+          <div class="theme-choice-grid">
+            <button class="theme-choice" id="profileLightTheme" type="button" aria-pressed="false"><span class="theme-preview theme-preview-light"><i></i><i></i><i></i></span><strong>Terang</strong><small>Cerah, hangat, dan segar</small></button>
+            <button class="theme-choice" id="profileDarkTheme" type="button" aria-pressed="false"><span class="theme-preview theme-preview-dark"><i></i><i></i><i></i></span><strong>Gelap</strong><small>Nyaman untuk suasana redup</small></button>
+          </div>
+        </section>
+
         <!-- FITUR GANTI PASSWORD -->
-        <section class="panel">
-          <h2>Keamanan Akun (Ganti Kata Sandi)</h2>
+        <section class="panel profile-security-panel">
+          <div class="profile-section-title"><div><p class="eyebrow">PERLINDUNGAN</p><h2>Keamanan akun</h2><p class="muted">Perbarui kata sandi akun email secara berkala.</p></div><span class="profile-section-symbol">⌑</span></div>
           <p class="muted">Ubah kata sandi akun Anda secara berkala demi keamanan.</p>
           <form id="passwordForm" class="profile-form">
             <label for="currentPassword">Kata sandi saat ini
