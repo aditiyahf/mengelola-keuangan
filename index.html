@@ -33,6 +33,12 @@
         </button>
       </form>
 
+      <div class="auth-divider"><span>atau</span></div>
+      <button id="googleSignInBtn" class="button google-button full-width" type="button">
+        <span class="google-g" aria-hidden="true">G</span>
+        Masuk dengan Google
+      </button>
+
       <p id="authMessage" class="message" aria-live="polite"></p>
 
       <p class="auth-switch">
@@ -84,14 +90,27 @@
       </div>
     </header>
 
-    <nav class="main-nav" aria-label="Navigasi utama">
-      <button class="nav-item active" type="button" data-view="dashboard">Ringkasan</button>
-      <button class="nav-item" type="button" data-view="transactionsView">Transaksi</button>
-      <button class="nav-item" type="button" data-view="budgetView">Anggaran</button>
-      <button class="nav-item" type="button" data-view="profileView">Profil & Target</button>
-    </nav>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navigasi utama">
+        <div class="sidebar-label">MENU UTAMA</div>
+        <nav class="main-nav">
+          <button class="nav-item active" type="button" data-view="dashboard"><span>⌂</span> Ringkasan</button>
+          <button class="nav-item" type="button" data-view="transactionsView"><span>↕</span> Transaksi</button>
+          <button class="nav-item" type="button" data-view="walletsView"><span>▣</span> Dompet</button>
+          <button class="nav-item" type="button" data-view="budgetView"><span>◫</span> Anggaran</button>
+          <button class="nav-item" type="button" data-view="calculatorView"><span>＋</span> Kalkulator</button>
+          <button class="nav-item" type="button" data-view="goalsView"><span>◎</span> Target</button>
+          <button class="nav-item" type="button" data-view="debtsView"><span>⇄</span> Utang & Piutang</button>
+          <button class="nav-item" type="button" data-view="calendarView"><span>▦</span> Kalender</button>
+          <button class="nav-item" type="button" data-view="reportsView"><span>▥</span> Laporan & Analisis</button>
+          <div class="sidebar-label sidebar-label-bottom">AKUN</div>
+          <button class="nav-item" type="button" data-view="settingsView"><span>⚙</span> Pengaturan & Backup</button>
+          <button class="nav-item" type="button" data-view="profileView"><span>◉</span> Profil</button>
+        </nav>
+        <div class="sidebar-note"><strong>Ruang Dana</strong><span>Kelola uang dengan lebih terarah.</span></div>
+      </aside>
 
-    <main class="container">
+      <main class="container">
       <!-- DASHBOARD VIEW -->
       <section id="dashboard" class="page-view">
         <div class="page-heading">
@@ -152,6 +171,12 @@
             <small>Dari alokasi uang bebas</small>
           </article>
         </div>
+
+        <section class="panel" id="reminderPanel">
+          <div class="section-heading"><div><p class="eyebrow">PENGINGAT</p><h2>Jadwal yang perlu diperhatikan</h2></div><button class="button secondary" type="button" data-view="debtsView">Kelola kewajiban</button></div>
+          <div id="dueReminders" class="activity-list"></div>
+          <p id="reminderEmpty" class="empty-state">Tidak ada kewajiban jatuh tempo yang tercatat.</p>
+        </section>
 
         <!-- VISUALISASI TARGET TUMPUKAN UANG -->
         <section class="panel money-target-panel">
@@ -232,6 +257,7 @@
             </div>
             <button class="button secondary" type="button" data-view="transactionsView">Lihat semua</button>
           </div>
+          <label class="search-control">Cari transaksi<input id="transactionSearch" type="search" placeholder="Cari keterangan atau kategori..."></label>
           <div class="table-wrap">
             <table>
               <thead>
@@ -279,6 +305,9 @@
 
             <label for="date">Tanggal
               <input id="date" type="date" required>
+            </label>
+            <label for="transactionWallet">Dompet (opsional)
+              <select id="transactionWallet"><option value="">Tidak ditautkan</option></select>
             </label>
 
             <label class="wide" for="note">Keterangan
@@ -410,10 +439,128 @@
         </section>
       </section>
 
+
+      <!-- DOMPET -->
+      <section id="walletsView" class="page-view" hidden>
+        <div class="page-heading"><div><p class="eyebrow">TEMPAT PENYIMPANAN</p><h1>Dompet & rekening</h1><p class="muted">Pisahkan saldo tunai, rekening bank, dan e-wallet.</p></div></div>
+        <section class="panel">
+          <h2>Tambah dompet</h2>
+          <form id="walletForm" class="inline-form">
+            <label>Nama dompet<input id="walletName" maxlength="50" placeholder="Contoh: Tabungan Bank" required></label>
+            <label>Jenis<select id="walletType"><option>Uang tunai</option><option>Rekening bank</option><option>E-wallet</option><option>Tabungan</option><option>Lainnya</option></select></label>
+            <label>Saldo awal (Rp)<input id="walletBalance" type="number" min="0" step="1" value="0" required></label>
+            <button class="button primary" type="submit">Tambah dompet</button>
+          </form>
+          <p id="walletMessage" class="message" aria-live="polite"></p>
+        </section>
+        <section class="panel"><div id="walletList" class="feature-grid"></div><p id="walletEmpty" class="empty-state">Belum ada dompet tambahan.</p></section>
+      </section>
+
+      <!-- KALKULATOR -->
+      <section id="calculatorView" class="page-view" hidden>
+        <div class="page-heading"><div><p class="eyebrow">ALAT BANTU</p><h1>Kalkulator keuangan</h1><p class="muted">Hitung pembagian uang dan simulasi tabungan.</p></div></div>
+        <div class="feature-grid">
+          <section class="panel">
+            <h2>Kalkulator saldo sederhana</h2>
+            <label>Uang tersedia (Rp)<input id="calcIncome" type="number" min="0" value="0"></label>
+            <label>Pengeluaran (Rp)<input id="calcExpense" type="number" min="0" value="0"></label>
+            <div class="result-strip"><span>Sisa uang</span><strong id="calcResult">Rp0</strong></div>
+          </section>
+          <section class="panel">
+            <h2>Pembagi uang otomatis</h2>
+            <label>Total uang (Rp)<input id="splitAmount" type="number" min="0" value="1000000"></label>
+            <div class="split-fields">
+              <label>Tabungan (%)<input id="splitSaving" type="number" min="0" max="100" value="20"></label>
+              <label>Kebutuhan (%)<input id="splitNeeds" type="number" min="0" max="100" value="50"></label>
+              <label>Keinginan (%)<input id="splitWants" type="number" min="0" max="100" value="30"></label>
+            </div>
+            <p id="splitValidation" class="muted small">Total pembagian: 100%</p>
+            <div id="splitResults" class="split-results"></div>
+          </section>
+        </div>
+        <section class="panel">
+          <h2>Simulasi target tabungan</h2>
+          <div class="inline-form">
+            <label>Target (Rp)<input id="simTarget" type="number" min="1" value="5000000"></label>
+            <label>Tabungan saat ini (Rp)<input id="simCurrent" type="number" min="0" value="0"></label>
+            <label>Setoran per bulan (Rp)<input id="simMonthly" type="number" min="1" value="500000"></label>
+          </div>
+          <div class="result-strip"><span>Estimasi waktu</span><strong id="simResult">10 bulan</strong></div>
+        </section>
+      </section>
+
+      <!-- TARGET -->
+      <section id="goalsView" class="page-view" hidden>
+        <div class="page-heading"><div><p class="eyebrow">RENCANA MASA DEPAN</p><h1>Target keuangan</h1><p class="muted">Tentukan tujuan dan hitung kebutuhan tabungan.</p></div></div>
+        <section class="panel">
+          <h2>Buat target baru</h2>
+          <form id="goalForm" class="inline-form">
+            <label>Nama target<input id="goalName" maxlength="60" placeholder="Contoh: Dana pendidikan" required></label>
+            <label>Nominal target (Rp)<input id="goalAmount" type="number" min="1" required></label>
+            <label>Tabungan terkumpul (Rp)<input id="goalCurrent" type="number" min="0" value="0" required></label>
+            <label>Tanggal target<input id="goalDate" type="date" required></label>
+            <button class="button primary" type="submit">Simpan target</button>
+          </form>
+          <p id="goalMessage" class="message" aria-live="polite"></p>
+        </section>
+        <section class="panel"><div id="goalList" class="feature-grid"></div><p id="goalEmpty" class="empty-state">Belum ada target keuangan.</p></section>
+      </section>
+
+      <!-- UTANG -->
+      <section id="debtsView" class="page-view" hidden>
+        <div class="page-heading"><div><p class="eyebrow">KEWAJIBAN & TAGIHAN</p><h1>Utang dan piutang</h1><p class="muted">Catat pinjaman dan uang yang perlu ditagih.</p></div></div>
+        <section class="panel">
+          <h2>Tambah catatan</h2>
+          <form id="debtForm" class="inline-form">
+            <label>Jenis<select id="debtType"><option value="payable">Utang (saya meminjam)</option><option value="receivable">Piutang (saya meminjamkan)</option></select></label>
+            <label>Nama / keterangan<input id="debtName" maxlength="70" required placeholder="Nama atau keperluan"></label>
+            <label>Nominal (Rp)<input id="debtAmount" type="number" min="1" required></label>
+            <label>Jatuh tempo<input id="debtDue" type="date"></label>
+            <button class="button primary" type="submit">Tambah catatan</button>
+          </form>
+          <p id="debtMessage" class="message" aria-live="polite"></p>
+        </section>
+        <section class="panel"><div id="debtList" class="feature-grid"></div><p id="debtEmpty" class="empty-state">Belum ada utang atau piutang.</p></section>
+      </section>
+
+      <!-- KALENDER -->
+      <section id="calendarView" class="page-view" hidden>
+        <div class="page-heading"><div><p class="eyebrow">AKTIVITAS BERDASARKAN TANGGAL</p><h1>Kalender keuangan</h1><p class="muted">Lihat pemasukan dan pengeluaran sesuai tanggal.</p></div><label class="month-control">Bulan<input id="calendarMonth" type="month"></label></div>
+        <section class="panel"><div id="calendarGrid" class="calendar-grid"></div></section>
+        <section class="panel"><h2>Aktivitas bulan terpilih</h2><div id="calendarEvents" class="activity-list"></div><p id="calendarEmpty" class="empty-state">Belum ada aktivitas pada bulan ini.</p></section>
+      </section>
+
+      <!-- LAPORAN -->
+      <section id="reportsView" class="page-view" hidden>
+        <div class="page-heading"><div><p class="eyebrow">RINGKASAN & EVALUASI</p><h1>Laporan dan kesehatan keuangan</h1><p class="muted">Bandingkan arus kas dan pahami kebiasaan keuangan.</p></div></div>
+        <section class="summary-grid">
+          <article class="summary-card"><span>Total pemasukan</span><strong id="reportIncome">Rp0</strong><small>Bulan terpilih</small></article>
+          <article class="summary-card"><span>Total pengeluaran</span><strong id="reportExpense">Rp0</strong><small>Bulan terpilih</small></article>
+          <article class="summary-card"><span>Sisa arus kas</span><strong id="reportNet">Rp0</strong><small>Pemasukan dikurangi pengeluaran</small></article>
+          <article class="summary-card"><span>Rasio tabungan</span><strong id="reportSavingRate">0%</strong><small>Indikator sederhana</small></article>
+        </section>
+        <section class="panel"><h2>Analisis kesehatan keuangan</h2><p id="healthStatus" class="health-status">Data belum tersedia.</p><ul id="healthInsights" class="insight-list"></ul></section>
+        <section class="panel"><h2>Tren enam bulan terakhir</h2><div id="monthlyTrend" class="trend-list"></div></section>
+      </section>
+
+      <!-- PENGATURAN & BACKUP -->
+      <section id="settingsView" class="page-view" hidden>
+        <div class="page-heading"><div><p class="eyebrow">DATA & PRIVASI</p><h1>Pengaturan dan backup</h1><p class="muted">Simpan salinan data dan pulihkan jika diperlukan.</p></div></div>
+        <section class="panel">
+          <h2>Backup data</h2>
+          <p class="muted">Unduh salinan JSON berisi data keuangan akun ini.</p>
+          <div class="button-row"><button id="backupButton" class="button primary" type="button">Unduh backup JSON</button><button id="exportCsvButton" class="button secondary" type="button">Ekspor transaksi CSV (Excel)</button><button id="printReportButton" class="button secondary" type="button">Cetak / Simpan PDF</button></div>
+          <label class="file-label">Pulihkan backup JSON<input id="restoreInput" type="file" accept="application/json,.json"></label>
+          <p id="backupMessage" class="message" aria-live="polite"></p>
+        </section>
+        <section class="panel"><h2>Privasi dan keamanan</h2><ul class="insight-list"><li>Data aplikasi disimpan pada Firestore dan dibatasi berdasarkan UID akun.</li><li>Jangan bagikan kata sandi atau file backup kepada orang lain.</li><li>Keluar dari akun jika menggunakan perangkat bersama.</li></ul><p class="muted small">Backup yang diunduh berisi informasi keuangan pribadi. Simpan di tempat yang aman.</p></section>
+      </section>
+
       <footer class="app-footer">
         <p>Ruang Dana · Pengelola keuangan pribadi.</p>
       </footer>
-    </main>
+      </main>
+    </div>
   </div>
 </body>
 </html>
