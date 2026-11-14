@@ -7,7 +7,9 @@ import {
   onAuthStateChanged,
   EmailAuthProvider,
   reauthenticateWithCredential,
-  updatePassword
+  updatePassword,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 import {
@@ -52,6 +54,10 @@ const formatMoney = n => new Intl.NumberFormat("id-ID", {
 
 let activeMonth = today().slice(0, 7);
 let months = { [activeMonth]: cloneDefault() };
+let wallets = [];
+let debts = [];
+let goals = [];
+let reminders = [];
 let userProfile = { ...DEFAULT_USER_PROFILE };
 let currentUser = null;
 let unsubscribeData = null;
@@ -110,7 +116,8 @@ function cleanMonth(input) {
       category: t.category,
       amount,
       date: t.date,
-      note: String(t.note || "").slice(0, 120)
+      note: String(t.note || "").slice(0, 120),
+      walletId: typeof t.walletId === "string" ? t.walletId : ""
     };
   });
 
@@ -134,7 +141,7 @@ function saveState() {
   if (!currentUser || !dataReady) return Promise.resolve();
 
   const uid = currentUser.uid;
-  const snapshot = JSON.parse(JSON.stringify({ months, profile: userProfile }));
+  const snapshot = JSON.parse(JSON.stringify({ months, profile: userProfile, wallets, debts, goals, reminders }));
   const ref = doc(db, "users", uid, "appData", "main");
 
   saveQueue = saveQueue
@@ -334,6 +341,8 @@ function buildTransactionRow(t) {
 
     const key = monthFromDate(t.date);
     months[key].transactions = months[key].transactions.filter(item => item.id !== t.id);
+    const linkedWallet = wallets.find(w => w.id === t.walletId);
+    if (linkedWallet) linkedWallet.balance += t.type === "income" ? -t.amount : t.amount;
     await saveState();
     renderAll();
     message("transactionMessage", "Transaksi dihapus.", "success");
@@ -345,9 +354,10 @@ function buildTransactionRow(t) {
 }
 
 function renderTransactions() {
-  const sorted = [...monthData().transactions].sort((a, b) =>
-    b.date.localeCompare(a.date) || b.id.localeCompare(a.id)
-  );
+  const term = ($("transactionSearch")?.value || "").trim().toLowerCase();
+  const sorted = [...monthData().transactions].filter(t =>
+    !term || `${t.note || ""} ${CATEGORIES[t.category] || ""} ${t.date}`.toLowerCase().includes(term)
+  ).sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
 
   $("transactions").replaceChildren();
   $("recentTransactions").replaceChildren();
@@ -483,11 +493,12 @@ function renderAll() {
   renderAllocations();
   renderTransactions();
   renderChart();
+  renderFeatureViews();
   if (currentUser) updateProfileUI(currentUser);
 }
 
 function showPage(id) {
-  const ids = ["dashboard", "transactionsView", "budgetView", "profileView"];
+  const ids = ["dashboard", "transactionsView", "budgetView", "profileView", "walletsView", "calculatorView", "goalsView", "debtsView", "calendarView", "reportsView", "settingsView"];
   if (!ids.includes(id)) return;
 
   ids.forEach(pageId => $(pageId).hidden = pageId !== id);
@@ -556,6 +567,8 @@ function wireNavigation() {
     monthData();
     renderAll();
   });
+
+  $("transactionSearch")?.addEventListener("input", renderTransactions);
 
   $("chartMode").addEventListener("change", () => {
     chartMode = $("chartMode").value;
@@ -707,6 +720,13 @@ function wireTransactions() {
     const key = monthFromDate(date);
     const data = monthData(key);
 
+    const walletId = $("transactionWallet")?.value || "";
+    const selectedWallet = wallets.find(w => w.id === walletId);
+    if (type === "expense" && selectedWallet && amount > selectedWallet.balance) {
+      message("transactionMessage", `Saldo dompet tidak cukup. Sisa ${formatMoney(selectedWallet.balance)}.`, "error");
+      return;
+    }
+
     if (type === "expense" && amount > balance(category, key)) {
       message("transactionMessage",
         `Saldo ${CATEGORIES[category]} bulan ${key} tidak cukup. Sisa ${formatMoney(balance(category, key))}.`,
@@ -716,8 +736,9 @@ function wireTransactions() {
 
     data.transactions.push({
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-      type, category, amount, date, note: note.slice(0, 120)
+      type, category, amount, date, note: note.slice(0, 120), walletId
     });
+    if (selectedWallet) selectedWallet.balance += type === "income" ? amount : -amount;
 
     activeMonth = key;
     $("monthPicker").value = key;
@@ -727,6 +748,254 @@ function wireTransactions() {
     $("transactionForm").reset();
     $("date").value = today();
     message("transactionMessage", "Transaksi berhasil disimpan.", "success");
+  });
+}
+
+
+function makeFeatureCard(title, detail, amountText = "", actions = []) {
+  const card = document.createElement("article");
+  card.className = "feature-card";
+  const heading = document.createElement("h3"); heading.textContent = title;
+  const desc = document.createElement("p"); desc.textContent = detail;
+  card.append(heading, desc);
+  if (amountText) { const amount = document.createElement("strong"); amount.textContent = amountText; card.append(amount); }
+  if (actions.length) {
+    const row = document.createElement("div"); row.className = "button-row";
+    actions.forEach(({ label, action, danger }) => {
+      const button = document.createElement("button"); button.type = "button";
+      button.className = danger ? "button danger-button" : "button secondary";
+      button.textContent = label; button.addEventListener("click", action); row.append(button);
+    });
+    card.append(row);
+  }
+  return card;
+}
+
+function monthIncome(key) {
+  const d = months[key] || { income: 0, transactions: [] };
+  return d.income + d.transactions.filter(t => t.type === "income").reduce((s,t)=>s+t.amount,0);
+}
+function monthExpense(key) {
+  const d = months[key] || { transactions: [] };
+  return d.transactions.filter(t => t.type === "expense").reduce((s,t)=>s+t.amount,0);
+}
+function renderFeatureViews() {
+  const walletSelect = $("transactionWallet");
+  if (walletSelect) {
+    const selected = walletSelect.value;
+    walletSelect.replaceChildren();
+    const none = document.createElement("option"); none.value = ""; none.textContent = "Tidak ditautkan"; walletSelect.append(none);
+    wallets.forEach(w => { const option=document.createElement("option");option.value=w.id;option.textContent=`${w.name} (${formatMoney(w.balance)})`;walletSelect.append(option); });
+    if (wallets.some(w=>w.id===selected)) walletSelect.value=selected;
+  }
+  // Wallets
+  const walletList = $("walletList");
+  if (walletList) {
+    walletList.replaceChildren();
+    wallets.forEach(w => walletList.append(makeFeatureCard(w.name, w.type, formatMoney(w.balance), [
+      { label: "Hapus", danger: true, action: async () => {
+        if (!confirm(`Hapus dompet "${w.name}"?`)) return;
+        wallets = wallets.filter(x => x.id !== w.id); await saveState(); renderFeatureViews();
+      }}
+    ])));
+    $("walletEmpty").hidden = wallets.length > 0;
+  }
+  // Goals
+  const goalList = $("goalList");
+  if (goalList) {
+    goalList.replaceChildren();
+    goals.forEach(g => {
+      const pct = g.target > 0 ? Math.min(100, Math.round(g.current / g.target * 100)) : 0;
+      const remaining = Math.max(0, g.target - g.current);
+      const days = Math.max(0, Math.ceil((new Date(`${g.date}T00:00:00`) - new Date(`${today()}T00:00:00`)) / 86400000));
+      const monthsLeft = Math.max(1, Math.ceil(days / 30));
+      const monthly = Math.ceil(remaining / monthsLeft);
+      goalList.append(makeFeatureCard(g.name, `Target ${g.date} · ${pct}% tercapai · Perlu sekitar ${formatMoney(monthly)}/bulan`, `${formatMoney(g.current)} dari ${formatMoney(g.target)}`, [
+        { label: "+ Tambah tabungan", action: async () => {
+          const raw = prompt("Berapa nominal yang ingin ditambahkan (Rp)?");
+          if (raw === null) return;
+          const value = Number(raw);
+          if (!Number.isSafeInteger(value) || value <= 0) return alert("Masukkan nominal rupiah yang valid.");
+          g.current = Math.min(g.target, g.current + value); await saveState(); renderFeatureViews();
+        }},
+        { label: "Hapus", danger: true, action: async () => {
+          if (!confirm(`Hapus target "${g.name}"?`)) return;
+          goals = goals.filter(x => x.id !== g.id); await saveState(); renderFeatureViews();
+        }}
+      ]));
+    });
+    $("goalEmpty").hidden = goals.length > 0;
+  }
+  // Debts and due reminders
+  const debtList = $("debtList");
+  if (debtList) {
+    debtList.replaceChildren();
+    debts.forEach(d => debtList.append(makeFeatureCard(
+      `${d.type === "payable" ? "Utang" : "Piutang"} · ${d.name}`,
+      `Jatuh tempo: ${d.due || "Belum ditentukan"} · Status: ${d.paid ? "Lunas" : "Belum lunas"}`,
+      formatMoney(d.amount),
+      [
+        { label: d.paid ? "Tandai belum lunas" : "Tandai lunas", action: async () => {
+          d.paid = !d.paid; await saveState(); renderFeatureViews();
+        }},
+        { label: "Hapus", danger: true, action: async () => {
+          if (!confirm("Hapus catatan ini?")) return;
+          debts = debts.filter(x => x.id !== d.id); await saveState(); renderFeatureViews();
+        }}
+      ]
+    )));
+    $("debtEmpty").hidden = debts.length > 0;
+  }
+  const reminderList = $("dueReminders");
+  if (reminderList) {
+    reminderList.replaceChildren();
+    const upcoming = debts.filter(d => !d.paid && d.due).sort((a,b)=>a.due.localeCompare(b.due));
+    upcoming.forEach(d => {
+      const row=document.createElement("div");row.className="activity-item";
+      const left=document.createElement("div");left.textContent=`${d.type==="payable"?"Utang":"Piutang"} · ${d.name}`;
+      const meta=document.createElement("small");meta.textContent=`Jatuh tempo ${d.due}`;left.append(meta);
+      const right=document.createElement("strong");right.textContent=formatMoney(d.amount);
+      row.append(left,right);reminderList.append(row);
+    });
+    $("reminderEmpty").hidden=upcoming.length>0;
+  }
+  // Reports and basic financial health assessment
+  const income = monthIncome(activeMonth), expense = monthExpense(activeMonth), net = income - expense;
+  const savingsRate = income > 0 ? Math.round(Math.max(0, net) / income * 100) : 0;
+  if ($("reportIncome")) {
+    $("reportIncome").textContent = formatMoney(income);
+    $("reportExpense").textContent = formatMoney(expense);
+    $("reportNet").textContent = formatMoney(net);
+    $("reportSavingRate").textContent = `${savingsRate}%`;
+    const status = $("healthStatus"), insights = $("healthInsights");
+    insights.replaceChildren();
+    if (income === 0 && expense === 0) {
+      status.textContent = "Belum cukup data untuk menilai kondisi bulan ini.";
+      ["Catat pemasukan dan pengeluaran secara konsisten.", "Analisis akan lebih bermakna setelah beberapa transaksi tercatat."].forEach(t=>{const li=document.createElement("li");li.textContent=t;insights.append(li);});
+    } else {
+      status.textContent = net < 0 ? "Perlu perhatian: pengeluaran lebih besar daripada pemasukan." : savingsRate >= 20 ? "Arus kas positif dengan rasio sisa uang yang baik." : "Arus kas positif, tetapi ruang untuk menabung masih dapat ditingkatkan.";
+      const tips = [
+        `Sisa arus kas bulan ini ${formatMoney(net)}.`,
+        `Rasio sisa uang terhadap pemasukan sekitar ${savingsRate}%.`,
+        expense > income * .8 ? "Pengeluaran sudah melebihi 80% pemasukan; periksa kembali kategori belanja." : "Jaga pengeluaran agar tetap sesuai rencana anggaran.",
+        debts.some(d=>!d.paid && d.due && d.due <= today()) ? "Ada utang atau piutang belum lunas yang tanggalnya sudah tiba atau lewat." : "Periksa tanggal jatuh tempo kewajiban secara berkala."
+      ];
+      tips.forEach(t=>{const li=document.createElement("li");li.textContent=t;insights.append(li);});
+    }
+    const trend = $("monthlyTrend"); trend.replaceChildren();
+    const keys = [];
+    const cursor = new Date(`${activeMonth}-01T00:00:00`);
+    for (let i=5;i>=0;i--) { const d=new Date(cursor.getFullYear(),cursor.getMonth()-i,1); keys.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`); }
+    const max = Math.max(1,...keys.flatMap(k=>[monthIncome(k),monthExpense(k)]));
+    keys.forEach(k=>{
+      const row=document.createElement("div");row.className="trend-row";
+      const label=document.createElement("strong");label.textContent=k.slice(5);
+      const inc=document.createElement("div");inc.innerHTML=`<small>Masuk ${formatMoney(monthIncome(k))}</small><div class="trend-track"><div class="trend-fill" style="width:${monthIncome(k)/max*100}%"></div></div>`;
+      const exp=document.createElement("div");exp.innerHTML=`<small>Keluar ${formatMoney(monthExpense(k))}</small><div class="trend-track"><div class="trend-fill" style="width:${monthExpense(k)/max*100}%;background:var(--danger)"></div></div>`;
+      row.append(label,inc,exp);trend.append(row);
+    });
+  }
+  renderCalendar();
+}
+
+function renderCalendar() {
+  const grid=$("calendarGrid"); if(!grid) return;
+  const month=$("calendarMonth").value || activeMonth;
+  const [year,monthNum]=month.split("-").map(Number);
+  const first=new Date(year,monthNum-1,1), count=new Date(year,monthNum,0).getDate();
+  grid.replaceChildren();
+  ["Min","Sen","Sel","Rab","Kam","Jum","Sab"].forEach(d=>{const el=document.createElement("div");el.className="calendar-weekday";el.textContent=d;grid.append(el);});
+  for(let i=0;i<first.getDay();i++){const blank=document.createElement("div");grid.append(blank);}
+  const entries=Object.values(months).flatMap(m=>m.transactions).filter(t=>t.date.startsWith(month));
+  for(let day=1;day<=count;day++){
+    const date=`${month}-${String(day).padStart(2,"0")}`;
+    const events=entries.filter(t=>t.date===date);
+    const cell=document.createElement("div");cell.className=`calendar-day ${events.length?"has-event":""}`;
+    const number=document.createElement("strong");number.textContent=day;cell.append(number);
+    if(events.length){const small=document.createElement("small");small.textContent=`${events.length} transaksi`;cell.append(small);}
+    grid.append(cell);
+  }
+  const list=$("calendarEvents");list.replaceChildren();
+  const sorted=entries.sort((a,b)=>a.date.localeCompare(b.date));
+  sorted.forEach(t=>{
+    const row=document.createElement("div");row.className="activity-item";
+    const left=document.createElement("div");left.textContent=t.note||CATEGORIES[t.category];const meta=document.createElement("small");meta.textContent=`${t.date} · ${CATEGORIES[t.category]}`;left.append(meta);
+    const right=document.createElement("strong");right.textContent=`${t.type==="income"?"+":"−"}${formatMoney(t.amount)}`;right.className=t.type==="income"?"":"danger-text";
+    row.append(left,right);list.append(row);
+  });
+  $("calendarEmpty").hidden=sorted.length>0;
+}
+
+function wireExtraFeatures() {
+  $("walletForm").addEventListener("submit",async e=>{
+    e.preventDefault();const name=$("walletName").value.trim(),balanceValue=Number($("walletBalance").value);
+    if(!name||!Number.isSafeInteger(balanceValue)||balanceValue<0){message("walletMessage","Nama dan saldo dompet harus valid.","error");return;}
+    wallets.push({id:crypto.randomUUID(),name,type:$("walletType").value,balance:balanceValue});
+    await saveState();$("walletForm").reset();$("walletBalance").value=0;renderFeatureViews();message("walletMessage","Dompet berhasil ditambahkan.","success");
+  });
+  $("goalForm").addEventListener("submit",async e=>{
+    e.preventDefault();const target=Number($("goalAmount").value),current=Number($("goalCurrent").value),date=$("goalDate").value,name=$("goalName").value.trim();
+    if(!name||!Number.isSafeInteger(target)||target<=0||!Number.isSafeInteger(current)||current<0||!date){message("goalMessage","Periksa kembali data target.","error");return;}
+    goals.push({id:crypto.randomUUID(),name,target,current:Math.min(current,target),date});
+    await saveState();$("goalForm").reset();renderFeatureViews();message("goalMessage","Target berhasil disimpan.","success");
+  });
+  $("debtForm").addEventListener("submit",async e=>{
+    e.preventDefault();const amount=Number($("debtAmount").value),name=$("debtName").value.trim();
+    if(!name||!Number.isSafeInteger(amount)||amount<=0){message("debtMessage","Nama dan nominal harus valid.","error");return;}
+    debts.push({id:crypto.randomUUID(),type:$("debtType").value,name,amount,due:$("debtDue").value,paid:false});
+    await saveState();$("debtForm").reset();renderFeatureViews();message("debtMessage","Catatan berhasil ditambahkan.","success");
+  });
+  const calculate=()=>{
+    const income=Number($("calcIncome").value)||0,expense=Number($("calcExpense").value)||0;
+    $("calcResult").textContent=formatMoney(income-expense);
+    const amount=Number($("splitAmount").value)||0;
+    const parts=[["Tabungan",Number($("splitSaving").value)],["Kebutuhan",Number($("splitNeeds").value)],["Keinginan",Number($("splitWants").value)]];
+    const total=parts.reduce((s,p)=>s+p[1],0);
+    $("splitValidation").textContent=`Total pembagian: ${total}% ${total===100?"✓":"— harus 100%"}`;
+    $("splitValidation").className=total===100?"message success":"message error";
+    $("splitResults").replaceChildren();
+    parts.forEach(([label,pct])=>{const row=document.createElement("div");row.className="split-result";const a=document.createElement("span");a.textContent=`${label} (${pct}%)`;const b=document.createElement("strong");b.textContent=formatMoney(Math.round(amount*pct/100));row.append(a,b);$("splitResults").append(row);});
+  };
+  ["calcIncome","calcExpense","splitAmount","splitSaving","splitNeeds","splitWants"].forEach(id=>$(id).addEventListener("input",calculate));
+  calculate();
+  const simulate=()=>{
+    const target=Number($("simTarget").value),current=Number($("simCurrent").value),monthly=Number($("simMonthly").value);
+    if(target<=current){$("simResult").textContent="Target tercapai";return;}
+    if(monthly<=0){$("simResult").textContent="Masukkan setoran bulanan";return;}
+    $("simResult").textContent=`${Math.ceil((target-current)/monthly)} bulan`;
+  };
+  ["simTarget","simCurrent","simMonthly"].forEach(id=>$(id).addEventListener("input",simulate));simulate();
+  $("calendarMonth").value=activeMonth;
+  $("calendarMonth").addEventListener("change",renderCalendar);
+  $("backupButton").addEventListener("click",()=>{
+    const data={version:2,exportedAt:new Date().toISOString(),months,profile:userProfile,wallets,debts,goals,reminders};
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`ruang-dana-backup-${today()}.json`;a.click();URL.revokeObjectURL(url);
+    message("backupMessage","Backup JSON berhasil dibuat.","success");
+  });
+  $("printReportButton").addEventListener("click",()=>{showPage("reportsView");window.print();});
+  $("exportCsvButton").addEventListener("click",()=>{
+    const all=Object.values(months).flatMap(m=>m.transactions);
+    const rows=[["Tanggal","Jenis","Kategori","Keterangan","Nominal","Dompet"],...all.map(t=>[t.date,t.type,CATEGORIES[t.category],t.note||"",t.amount,wallets.find(w=>w.id===t.walletId)?.name||""])];
+    const csv=rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\r\n");
+    const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
+    const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`ruang-dana-transaksi-${today()}.csv`;a.click();URL.revokeObjectURL(url);
+    message("backupMessage","Ekspor CSV berhasil dibuat.","success");
+  });
+  $("restoreInput").addEventListener("change",async e=>{
+    const file=e.target.files[0];if(!file)return;
+    try{
+      const data=JSON.parse(await file.text());
+      if(!data||typeof data!=="object"||!data.months||typeof data.months!=="object")throw new Error("Format backup tidak dikenali.");
+      const restoredMonths=cleanMonths(data.months);
+      if(!confirm("Pulihkan backup? Data cloud saat ini akan digantikan dengan isi file backup."))return;
+      months=restoredMonths;userProfile={...DEFAULT_USER_PROFILE,...(data.profile||{})};
+      wallets=Array.isArray(data.wallets)?data.wallets:[];debts=Array.isArray(data.debts)?data.debts:[];
+      goals=Array.isArray(data.goals)?data.goals:[];reminders=Array.isArray(data.reminders)?data.reminders:[];
+      if(!months[activeMonth])months[activeMonth]=cloneDefault();
+      await saveState();renderAll();message("backupMessage","Backup berhasil dipulihkan.","success");
+    }catch(err){console.error(err);message("backupMessage",`Gagal memulihkan backup: ${err.message}`,"error");}
+    finally{e.target.value="";}
   });
 }
 
@@ -768,6 +1037,31 @@ function wireAuth() {
     }
   });
 
+  $("googleSignInBtn").addEventListener("click", async () => {
+    if (authBusy) return;
+    authBusy = true;
+    $("googleSignInBtn").disabled = true;
+    message("authMessage", "Menghubungkan ke Google...");
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error("Google sign-in error:", error);
+      const errors = {
+        "auth/popup-closed-by-user": "Jendela login ditutup sebelum selesai.",
+        "auth/popup-blocked": "Popup diblokir browser. Izinkan popup lalu coba lagi.",
+        "auth/unauthorized-domain": "Domain website belum diizinkan di Firebase Authentication.",
+        "auth/operation-not-allowed": "Aktifkan penyedia Google di Firebase Authentication.",
+        "auth/account-exists-with-different-credential": "Email ini sudah digunakan dengan metode login lain. Masuk dengan metode lama terlebih dahulu."
+      };
+      message("authMessage", errors[error.code] || `Login Google gagal (${error.code || "kesalahan"}).`, "error");
+    } finally {
+      authBusy = false;
+      $("googleSignInBtn").disabled = false;
+    }
+  });
+
   $("toggleAuthMode").addEventListener("click", () => {
     signupMode = !signupMode;
     $("authTitle").textContent = signupMode ? "Buat akun baru" : "Selamat datang";
@@ -802,7 +1096,8 @@ async function connectUser(user) {
     if (!snapshot.exists()) {
       months = { [activeMonth]: cloneDefault() };
       userProfile = { ...DEFAULT_USER_PROFILE };
-      await setDoc(ref, { months, profile: userProfile });
+      wallets = []; debts = []; goals = []; reminders = [];
+      await setDoc(ref, { months, profile: userProfile, wallets, debts, goals, reminders });
     } else {
       const cloud = snapshot.data();
       months = cloud.months ? cleanMonths(cloud.months) : {};
@@ -811,6 +1106,10 @@ async function connectUser(user) {
       if (cloud.profile) {
         userProfile = { ...DEFAULT_USER_PROFILE, ...cloud.profile };
       }
+      wallets = Array.isArray(cloud.wallets) ? cloud.wallets : [];
+      debts = Array.isArray(cloud.debts) ? cloud.debts : [];
+      goals = Array.isArray(cloud.goals) ? cloud.goals : [];
+      reminders = Array.isArray(cloud.reminders) ? cloud.reminders : [];
       if (userProfile.theme) {
         applyTheme(userProfile.theme);
       }
@@ -832,6 +1131,10 @@ async function connectUser(user) {
           userProfile = { ...DEFAULT_USER_PROFILE, ...cloud.profile };
           applyTheme(userProfile.theme);
         }
+        wallets = Array.isArray(cloud.wallets) ? cloud.wallets : [];
+        debts = Array.isArray(cloud.debts) ? cloud.debts : [];
+        goals = Array.isArray(cloud.goals) ? cloud.goals : [];
+        reminders = Array.isArray(cloud.reminders) ? cloud.reminders : [];
 
         renderAll();
       } catch (error) {
@@ -853,6 +1156,7 @@ function disconnectUser() {
   currentUser = null;
   dataReady = false;
   months = { [activeMonth]: cloneDefault() };
+  wallets = []; debts = []; goals = []; reminders = [];
   userProfile = { ...DEFAULT_USER_PROFILE };
   $("authForm").reset();
   $("profileMenu").hidden = true;
@@ -871,6 +1175,7 @@ wireNavigation();
 wireProfileAndTarget();
 wireBudget();
 wireTransactions();
+wireExtraFeatures();
 
 onAuthStateChanged(auth, user => {
   if (user) {
