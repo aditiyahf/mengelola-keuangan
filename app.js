@@ -50,7 +50,13 @@ const today = () => {
 const monthFromDate = date => date.slice(0, 7);
 const formatMoney = n => new Intl.NumberFormat("id-ID", {
   style: "currency", currency: "IDR", maximumFractionDigits: 0
-}).format(n);
+}).format(Number(n) || 0);
+const formatInteger = n => new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(Number(n) || 0);
+const parseMoney = value => {
+  const digits = String(value ?? "").replace(/[^0-9-]/g, "");
+  return digits ? Number(digits) : 0;
+};
+const readMoney = id => parseMoney($(id)?.value);
 
 let activeMonth = today().slice(0, 7);
 let months = { [activeMonth]: cloneDefault() };
@@ -491,6 +497,7 @@ function updateProfileUI(user) {
   $("profileDetailsName").textContent = name;
   $("profileDetailsEmail").textContent = email;
   $("profileDetailsBio").textContent = userProfile.bio || "";
+  if ($("notificationToggle")) $("notificationToggle").checked = Boolean(userProfile.notificationsEnabled);
 
   const transactionCount = Object.values(months || {}).reduce((total, month) => total + (Array.isArray(month.transactions) ? month.transactions.length : 0), 0);
   const goalCount = Array.isArray(goals) ? goals.length : 0;
@@ -509,7 +516,7 @@ function updateProfileUI(user) {
 
   $("editUsername").value = name;
   $("editBio").value = userProfile.bio || "";
-  $("editTargetAnnual").value = userProfile.targetAnnual || 20000000;
+  $("editTargetAnnual").value = formatInteger(userProfile.targetAnnual || 20000000);
 
   const avatars = [$("profileAvatar"), $("profileDetailsAvatar")];
   avatars.forEach(el => {
@@ -561,6 +568,22 @@ async function logout() {
     $("logoutButton").disabled = false;
     $("profileLogoutButton").disabled = false;
   }
+}
+
+function wireMoneyInputs() {
+  document.querySelectorAll("[data-money-input]").forEach(input => {
+    input.setAttribute("inputmode", "numeric");
+    input.setAttribute("autocomplete", "off");
+    input.addEventListener("focus", () => { input.value = String(parseMoney(input.value) || ""); });
+    input.addEventListener("input", () => {
+      const clean = input.value.replace(/[^0-9]/g, "");
+      if (input.value !== clean) input.value = clean;
+    });
+    input.addEventListener("blur", () => {
+      if (input.value.trim()) input.value = formatInteger(parseMoney(input.value));
+    });
+    if (input.value.trim()) input.value = formatInteger(parseMoney(input.value));
+  });
 }
 
 function wireThemeToggle() {
@@ -626,7 +649,7 @@ function wireProfileAndTarget() {
 
     const username = $("editUsername").value.trim();
     const bio = $("editBio").value.trim();
-    const targetAnnual = Number($("editTargetAnnual").value);
+    const targetAnnual = readMoney("editTargetAnnual");
 
     if (!username) {
       message("profileFormMessage", "Username tidak boleh kosong.", "error");
@@ -676,6 +699,21 @@ function wireProfileAndTarget() {
     }
   });
 
+  $("notificationToggle")?.addEventListener("change", async event => {
+    userProfile.notificationsEnabled = event.target.checked;
+    if (event.target.checked && "Notification" in window && Notification.permission === "default") {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        userProfile.notificationsEnabled = false;
+        event.target.checked = false;
+        message("notificationMessage", "Izin notifikasi belum diberikan oleh browser.", "error");
+      } else message("notificationMessage", "Preferensi notifikasi disimpan. Pengingat browser dapat ditampilkan saat aplikasi dibuka.", "success");
+    } else {
+      message("notificationMessage", event.target.checked ? "Notifikasi diaktifkan." : "Notifikasi dinonaktifkan.", "success");
+    }
+    await saveState();
+  });
+
   $("avatarInput").addEventListener("change", event => {
     const file = event.target.files[0];
     if (!file) return;
@@ -703,7 +741,7 @@ function wireProfileAndTarget() {
 
 function wireBudget() {
   $("saveBudget").addEventListener("click", async () => {
-    const income = Number($("budgetIncome").value);
+    const income = readMoney("budgetIncome");
 
     if (!Number.isSafeInteger(income) || income < 0) {
       message("budgetMessage", "Pendapatan harus berupa angka positif atau nol.", "error");
@@ -740,7 +778,7 @@ function wireTransactions() {
 
     const type = $("type").value;
     const category = $("category").value;
-    const amount = Number($("amount").value);
+    const amount = readMoney("amount");
     const date = $("date").value;
     const note = $("note").value.trim();
 
@@ -909,6 +947,29 @@ function renderFeatureViews() {
     $("reportExpense").textContent = formatMoney(expense);
     $("reportNet").textContent = formatMoney(net);
     $("reportSavingRate").textContent = `${savingsRate}%`;
+    const investment = balance("investasi", activeMonth);
+    if ($("reportInvestment")) $("reportInvestment").textContent = formatMoney(investment);
+    const history = $("monthlyHistory");
+    if (history) {
+      history.replaceChildren();
+      Object.keys(months).sort((a,b) => b.localeCompare(a)).forEach(key => {
+        const row = document.createElement("div"); row.className = "activity-item monthly-history-row";
+        const label = document.createElement("div");
+        const title = document.createElement("strong");
+        title.textContent = new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric" }).format(new Date(`${key}-01T00:00:00`));
+        const detail = document.createElement("small"); detail.textContent = `${monthData(key).transactions.length} transaksi`;
+        label.append(title, detail);
+        const amounts = document.createElement("div"); amounts.className = "monthly-history-values";
+        const inc = document.createElement("span"); inc.textContent = `Masuk ${formatMoney(monthIncome(key))}`;
+        const exp = document.createElement("span"); exp.textContent = `Keluar ${formatMoney(monthExpense(key))}`;
+        const inv = document.createElement("span"); inv.textContent = `Investasi ${formatMoney(balance("investasi", key))}`;
+        amounts.append(inc, exp, inv); row.append(label, amounts);
+        row.tabIndex = 0; row.setAttribute("role", "button"); row.setAttribute("aria-label", `Lihat laporan ${key}`);
+        row.addEventListener("click", () => { activeMonth = key; $("monthPicker").value = key; renderAll(); });
+        row.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); row.click(); } });
+        history.append(row);
+      });
+    }
     const status = $("healthStatus"), insights = $("healthInsights");
     insights.replaceChildren();
     if (income === 0 && expense === 0) {
@@ -970,27 +1031,27 @@ function renderCalendar() {
 
 function wireExtraFeatures() {
   $("walletForm").addEventListener("submit",async e=>{
-    e.preventDefault();const name=$("walletName").value.trim(),balanceValue=Number($("walletBalance").value);
+    e.preventDefault();const name=$("walletName").value.trim(),balanceValue=readMoney("walletBalance");
     if(!name||!Number.isSafeInteger(balanceValue)||balanceValue<0){message("walletMessage","Nama dan saldo dompet harus valid.","error");return;}
     wallets.push({id:crypto.randomUUID(),name,type:$("walletType").value,balance:balanceValue});
     await saveState();$("walletForm").reset();$("walletBalance").value=0;renderFeatureViews();message("walletMessage","Dompet berhasil ditambahkan.","success");
   });
   $("goalForm").addEventListener("submit",async e=>{
-    e.preventDefault();const target=Number($("goalAmount").value),current=Number($("goalCurrent").value),date=$("goalDate").value,name=$("goalName").value.trim();
+    e.preventDefault();const target=readMoney("goalAmount"),current=readMoney("goalCurrent"),date=$("goalDate").value,name=$("goalName").value.trim();
     if(!name||!Number.isSafeInteger(target)||target<=0||!Number.isSafeInteger(current)||current<0||!date){message("goalMessage","Periksa kembali data target.","error");return;}
     goals.push({id:crypto.randomUUID(),name,target,current:Math.min(current,target),date});
     await saveState();$("goalForm").reset();renderFeatureViews();message("goalMessage","Target berhasil disimpan.","success");
   });
   $("debtForm").addEventListener("submit",async e=>{
-    e.preventDefault();const amount=Number($("debtAmount").value),name=$("debtName").value.trim();
+    e.preventDefault();const amount=readMoney("debtAmount"),name=$("debtName").value.trim();
     if(!name||!Number.isSafeInteger(amount)||amount<=0){message("debtMessage","Nama dan nominal harus valid.","error");return;}
     debts.push({id:crypto.randomUUID(),type:$("debtType").value,name,amount,due:$("debtDue").value,paid:false});
     await saveState();$("debtForm").reset();renderFeatureViews();message("debtMessage","Catatan berhasil ditambahkan.","success");
   });
   const calculate=()=>{
-    const income=Number($("calcIncome").value)||0,expense=Number($("calcExpense").value)||0;
+    const income=readMoney("calcIncome"),expense=readMoney("calcExpense");
     $("calcResult").textContent=formatMoney(income-expense);
-    const amount=Number($("splitAmount").value)||0;
+    const amount=readMoney("splitAmount");
     const parts=[["Tabungan",Number($("splitSaving").value)],["Kebutuhan",Number($("splitNeeds").value)],["Keinginan",Number($("splitWants").value)]];
     const total=parts.reduce((s,p)=>s+p[1],0);
     $("splitValidation").textContent=`Total pembagian: ${total}% ${total===100?"✓":"— harus 100%"}`;
@@ -1001,7 +1062,7 @@ function wireExtraFeatures() {
   ["calcIncome","calcExpense","splitAmount","splitSaving","splitNeeds","splitWants"].forEach(id=>$(id).addEventListener("input",calculate));
   calculate();
   const simulate=()=>{
-    const target=Number($("simTarget").value),current=Number($("simCurrent").value),monthly=Number($("simMonthly").value);
+    const target=readMoney("simTarget"),current=readMoney("simCurrent"),monthly=readMoney("simMonthly");
     if(target<=current){$("simResult").textContent="Target tercapai";return;}
     if(monthly<=0){$("simResult").textContent="Masukkan setoran bulanan";return;}
     $("simResult").textContent=`${Math.ceil((target-current)/monthly)} bulan`;
@@ -1160,6 +1221,9 @@ async function connectUser(user) {
     if (currentUser?.uid !== user.uid) return;
     dataReady = true;
     renderAll();
+    if (!localStorage.getItem("ruangDanaOnboardingSeen") && $("onboardingDialog")?.showModal) {
+      $("onboardingDialog").showModal();
+    }
 
     unsubscribeData = onSnapshot(ref, remote => {
       if (!remote.exists() || !currentUser || currentUser.uid !== user.uid) return;
@@ -1211,8 +1275,10 @@ function disconnectUser() {
 $("monthPicker").value = activeMonth;
 $("date").value = today();
 
+wireMoneyInputs();
 wireThemeToggle();
 wireAuth();
+$("onboardingClose")?.addEventListener("click", () => { localStorage.setItem("ruangDanaOnboardingSeen", "1"); $("onboardingDialog").close(); });
 wireNavigation();
 wireProfileAndTarget();
 wireBudget();
