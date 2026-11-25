@@ -29,7 +29,7 @@ const CATEGORIES = {
 };
 
 const DEFAULT_MONTH = {
-  income: 2000000,
+  income: 0,
   allocations: { investasi: 20, tabungan: 20, darurat: 10, bebas: 50 },
   transactions: []
 };
