@@ -35,8 +35,9 @@
 
       <div class="auth-divider"><span>atau</span></div>
       <button id="googleSignInBtn" class="button google-button full-width" type="button">
-        <span class="google-g" aria-hidden="true">G</span>
-        Masuk dengan Google
+        <img src="assets/google-logo.jpg" alt="" class="google-logo" aria-hidden="true">
+        <span><strong>Lanjutkan dengan Google</strong><small>Masuk dengan aman menggunakan akun Google</small></span>
+        <span class="google-button-arrow" aria-hidden="true">→</span>
       </button>
 
       <p id="authMessage" class="message" aria-live="polite"></p>
@@ -49,6 +50,21 @@
 
     <p class="auth-footnote">Keuanganmu, dikelola dengan lebih teratur.</p>
   </section>
+
+  <dialog id="onboardingDialog" class="onboarding-dialog" aria-labelledby="onboardingTitle">
+    <div class="onboarding-content">
+      <span class="brand-mark">R</span>
+      <p class="eyebrow">PANDUAN SINGKAT</p>
+      <h2 id="onboardingTitle">Selamat datang di Ruang Dana</h2>
+      <p class="muted">Mulai dengan tiga langkah sederhana agar catatan keuanganmu rapi.</p>
+      <ol class="onboarding-steps">
+        <li><strong>Atur anggaran</strong><span>Tentukan pemasukan dan pembagian uang bulanan.</span></li>
+        <li><strong>Catat transaksi</strong><span>Masukkan pemasukan dan pengeluaran setiap kali terjadi.</span></li>
+        <li><strong>Pantau analisis</strong><span>Lihat arus kas, investasi, dan riwayat setiap bulan.</span></li>
+      </ol>
+      <button id="onboardingClose" class="button primary full-width" type="button">Mulai gunakan Ruang Dana</button>
+    </div>
+  </dialog>
 
   <div id="appView" hidden>
     <header class="topbar">
@@ -300,7 +316,7 @@
             </label>
 
             <label for="amount">Nominal (Rp)
-              <input id="amount" type="number" min="1" step="1" placeholder="25000" required>
+              <input id="amount" type="text" data-money-input min="1" step="1" placeholder="25000" required>
             </label>
 
             <label for="date">Tanggal
@@ -350,7 +366,7 @@
 
         <section class="panel">
           <label for="budgetIncome">Pendapatan utama bulan terpilih (Rp)
-            <input id="budgetIncome" type="number" min="0" step="1000" required>
+            <input id="budgetIncome" type="text" data-money-input min="0" step="1000" required>
           </label>
           <p class="muted small">Pemasukan tambahan dicatat melalui formulir transaksi.</p>
         </section>
@@ -424,7 +440,7 @@
             </label>
 
             <label for="editTargetAnnual">Target Finansial Tahun Ini (Rp)
-              <input id="editTargetAnnual" type="number" min="0" step="10000" placeholder="Contoh: 20000000">
+              <input id="editTargetAnnual" type="text" data-money-input min="0" step="10000" placeholder="Contoh: 20000000">
             </label>
 
             <button class="button primary" type="submit">Simpan Perubahan Profil</button>
@@ -438,6 +454,12 @@
             <button class="theme-choice" id="profileLightTheme" type="button" aria-pressed="false"><span class="theme-preview theme-preview-light"><i></i><i></i><i></i></span><strong>Terang</strong><small>Cerah, hangat, dan segar</small></button>
             <button class="theme-choice" id="profileDarkTheme" type="button" aria-pressed="false"><span class="theme-preview theme-preview-dark"><i></i><i></i><i></i></span><strong>Gelap</strong><small>Nyaman untuk suasana redup</small></button>
           </div>
+        </section>
+
+        <section class="panel notification-settings-panel">
+          <div class="profile-section-title"><div><p class="eyebrow">PENGINGAT</p><h2>Notifikasi keuangan</h2><p class="muted">Atur izin pengingat browser saat kamu membuka Ruang Dana.</p></div><span class="profile-section-symbol">♧</span></div>
+          <label class="notification-toggle" for="notificationToggle"><span><strong>Aktifkan notifikasi</strong><small class="muted">Izin browser diperlukan untuk menampilkan notifikasi.</small></span><input id="notificationToggle" type="checkbox"></label>
+          <p id="notificationMessage" class="message" aria-live="polite"></p>
         </section>
 
         <!-- FITUR GANTI PASSWORD -->
@@ -478,7 +500,7 @@
           <form id="walletForm" class="inline-form">
             <label>Nama dompet<input id="walletName" maxlength="50" placeholder="Contoh: Tabungan Bank" required></label>
             <label>Jenis<select id="walletType"><option>Uang tunai</option><option>Rekening bank</option><option>E-wallet</option><option>Tabungan</option><option>Lainnya</option></select></label>
-            <label>Saldo awal (Rp)<input id="walletBalance" type="number" min="0" step="1" value="0" required></label>
+            <label>Saldo awal (Rp)<input id="walletBalance" type="text" data-money-input min="0" step="1" value="0" required></label>
             <button class="button primary" type="submit">Tambah dompet</button>
           </form>
           <p id="walletMessage" class="message" aria-live="polite"></p>
@@ -492,13 +514,13 @@
         <div class="feature-grid">
           <section class="panel">
             <h2>Kalkulator saldo sederhana</h2>
-            <label>Uang tersedia (Rp)<input id="calcIncome" type="number" min="0" value="0"></label>
-            <label>Pengeluaran (Rp)<input id="calcExpense" type="number" min="0" value="0"></label>
+            <label>Uang tersedia (Rp)<input id="calcIncome" type="text" data-money-input min="0" value="0"></label>
+            <label>Pengeluaran (Rp)<input id="calcExpense" type="text" data-money-input min="0" value="0"></label>
             <div class="result-strip"><span>Sisa uang</span><strong id="calcResult">Rp0</strong></div>
           </section>
           <section class="panel">
             <h2>Pembagi uang otomatis</h2>
-            <label>Total uang (Rp)<input id="splitAmount" type="number" min="0" value="1000000"></label>
+            <label>Total uang (Rp)<input id="splitAmount" type="text" data-money-input min="0" value="1000000"></label>
             <div class="split-fields">
               <label>Tabungan (%)<input id="splitSaving" type="number" min="0" max="100" value="20"></label>
               <label>Kebutuhan (%)<input id="splitNeeds" type="number" min="0" max="100" value="50"></label>
@@ -511,9 +533,9 @@
         <section class="panel">
           <h2>Simulasi target tabungan</h2>
           <div class="inline-form">
-            <label>Target (Rp)<input id="simTarget" type="number" min="1" value="5000000"></label>
-            <label>Tabungan saat ini (Rp)<input id="simCurrent" type="number" min="0" value="0"></label>
-            <label>Setoran per bulan (Rp)<input id="simMonthly" type="number" min="1" value="500000"></label>
+            <label>Target (Rp)<input id="simTarget" type="text" data-money-input min="1" value="5000000"></label>
+            <label>Tabungan saat ini (Rp)<input id="simCurrent" type="text" data-money-input min="0" value="0"></label>
+            <label>Setoran per bulan (Rp)<input id="simMonthly" type="text" data-money-input min="1" value="500000"></label>
           </div>
           <div class="result-strip"><span>Estimasi waktu</span><strong id="simResult">10 bulan</strong></div>
         </section>
@@ -526,8 +548,8 @@
           <h2>Buat target baru</h2>
           <form id="goalForm" class="inline-form">
             <label>Nama target<input id="goalName" maxlength="60" placeholder="Contoh: Dana pendidikan" required></label>
-            <label>Nominal target (Rp)<input id="goalAmount" type="number" min="1" required></label>
-            <label>Tabungan terkumpul (Rp)<input id="goalCurrent" type="number" min="0" value="0" required></label>
+            <label>Nominal target (Rp)<input id="goalAmount" type="text" data-money-input min="1" required></label>
+            <label>Tabungan terkumpul (Rp)<input id="goalCurrent" type="text" data-money-input min="0" value="0" required></label>
             <label>Tanggal target<input id="goalDate" type="date" required></label>
             <button class="button primary" type="submit">Simpan target</button>
           </form>
@@ -544,7 +566,7 @@
           <form id="debtForm" class="inline-form">
             <label>Jenis<select id="debtType"><option value="payable">Utang (saya meminjam)</option><option value="receivable">Piutang (saya meminjamkan)</option></select></label>
             <label>Nama / keterangan<input id="debtName" maxlength="70" required placeholder="Nama atau keperluan"></label>
-            <label>Nominal (Rp)<input id="debtAmount" type="number" min="1" required></label>
+            <label>Nominal (Rp)<input id="debtAmount" type="text" data-money-input min="1" required></label>
             <label>Jatuh tempo<input id="debtDue" type="date"></label>
             <button class="button primary" type="submit">Tambah catatan</button>
           </form>
@@ -568,9 +590,11 @@
           <article class="summary-card"><span>Total pengeluaran</span><strong id="reportExpense">Rp0</strong><small>Bulan terpilih</small></article>
           <article class="summary-card"><span>Sisa arus kas</span><strong id="reportNet">Rp0</strong><small>Pemasukan dikurangi pengeluaran</small></article>
           <article class="summary-card"><span>Rasio tabungan</span><strong id="reportSavingRate">0%</strong><small>Indikator sederhana</small></article>
+          <article class="summary-card investment-summary"><span>Investasi bulan ini</span><strong id="reportInvestment">Rp0</strong><small>Saldo alokasi investasi bulan terpilih</small></article>
         </section>
         <section class="panel"><h2>Analisis kesehatan keuangan</h2><p id="healthStatus" class="health-status">Data belum tersedia.</p><ul id="healthInsights" class="insight-list"></ul></section>
-        <section class="panel"><h2>Tren enam bulan terakhir</h2><div id="monthlyTrend" class="trend-list"></div></section>
+        <section class="panel"><h2>Tren enam bulan terakhir</h2><p class="muted small">Ringkasan pemasukan dan pengeluaran untuk melihat perubahan arus kas.</p><div id="monthlyTrend" class="trend-list"></div></section>
+        <section class="panel"><div class="section-heading"><div><h2>Riwayat analisis bulanan</h2><p class="muted">Pilih bulan untuk membuka kembali ringkasan keuangan.</p></div></div><div id="monthlyHistory" class="monthly-history-list"></div></section>
       </section>
 
       <!-- PENGATURAN & BACKUP -->
