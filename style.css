@@ -605,3 +605,56 @@ body {
   #dashboard .summary-card, #dashboard .allocation-card { transition: none; }
   #dashboard .summary-card:hover, #dashboard .allocation-card:hover { transform: none; }
 }
+
+/* Ruang Dana usability and responsive refinements */
+.google-button {
+  min-height: 66px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-card);
+  color: var(--text);
+  text-align: left;
+  box-shadow: 0 5px 18px color-mix(in srgb, var(--text) 5%, transparent);
+}
+.google-button:hover { border-color: var(--primary); transform: translateY(-1px); }
+.google-button .google-logo { width: 28px; height: 28px; flex: 0 0 28px; object-fit: contain; border-radius: 50%; }
+.google-button span:nth-child(2) { display: grid; gap: 3px; flex: 1; }
+.google-button strong { font-size: .94rem; font-weight: 650; }
+.google-button small { color: var(--muted); font-size: .75rem; font-weight: 400; }
+.google-button-arrow { font-size: 1.25rem; color: var(--muted); }
+.onboarding-dialog { width: min(92vw, 480px); border: 1px solid var(--line); border-radius: 22px; padding: 0; color: var(--text); background: var(--surface-card); box-shadow: 0 24px 80px rgba(0,0,0,.25); }
+.onboarding-dialog::backdrop { background: rgba(10, 20, 16, .58); backdrop-filter: blur(4px); }
+.onboarding-content { padding: clamp(22px, 5vw, 34px); }
+.onboarding-content > .brand-mark { display: inline-grid; place-items: center; width: 44px; height: 44px; margin-bottom: 18px; }
+.onboarding-content h2 { margin: 5px 0 8px; }
+.onboarding-steps { display: grid; gap: 14px; padding-left: 22px; margin: 22px 0; }
+.onboarding-steps li { padding-left: 5px; }
+.onboarding-steps li strong, .onboarding-steps li span { display: block; }
+.onboarding-steps li span { margin-top: 3px; color: var(--muted); font-size: .9rem; }
+.monthly-history-list { display: grid; gap: 8px; }
+.monthly-history-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; cursor: pointer; border: 1px solid var(--line); border-radius: 12px; padding: 13px 15px; }
+.monthly-history-row:hover, .monthly-history-row:focus-visible { border-color: var(--primary); outline: none; }
+.monthly-history-row > div:first-child { display: grid; gap: 3px; }
+.monthly-history-row small { color: var(--muted); }
+.monthly-history-values { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; text-align: right; font-size: .82rem; }
+.investment-summary strong { color: var(--primary); }
+.notification-toggle { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 14px 0; cursor: pointer; }
+.notification-toggle span { display: grid; gap: 4px; }
+.notification-toggle small { font-size: .82rem; }
+.notification-toggle input { width: 22px; height: 22px; accent-color: var(--primary); }
+input[data-money-input] { font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+@media (max-width: 700px) {
+  .google-button { min-height: 62px; }
+  .monthly-history-row { align-items: flex-start; flex-direction: column; }
+  .monthly-history-values { width: 100%; grid-template-columns: 1fr; text-align: left; gap: 5px; }
+  .onboarding-dialog { max-height: 88vh; overflow-y: auto; }
+}
+@media (min-width: 701px) and (max-width: 1024px) {
+  .app-shell { grid-template-columns: 210px minmax(0, 1fr); }
+  .container { min-width: 0; }
+}
